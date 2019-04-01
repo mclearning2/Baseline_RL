@@ -27,7 +27,8 @@ class BaseProject(ABC):
         '''
 
     @abstractmethod
-    def init_env(self) -> Tuple[gym.Env, Callable]:
+    def init_env(self, hyper_params) \
+        -> Tuple[gym.Env, Callable]:
         '''You must return environment with video_callable for recording
 
         Examples:
@@ -43,17 +44,40 @@ class BaseProject(ABC):
         
         Examples:
             model = MLP(...)
-            optim = MLP(...)
-            
+            optimizer = optim(...)
+
+            return {'model': model, 'optim': optimizer} 
         '''
 
     @abstractmethod
-    def train(self):
+    def init_agent(self, env, models, device, hyper_params):
+        '''You must return agent
+
+        Examples:
+            return A2C(...)
+
+        '''
+
+    @abstractmethod
+    def train(self, agent):
         pass
 
     @abstractmethod
-    def test(self):
+    def test(self, agnet, render):
         pass
+
+    def monitor(self, env, video_callable=None, force=True, *args, **kargs):
+        if self.config.record:
+            return Monitor(
+                env = env,
+                directory = self.config.video_dir,
+                video_callable=video_callable,
+                force=force,
+                *args,
+                **kargs
+            )
+        else:
+            return env
 
     def __restore_wandb(self):
         
@@ -105,19 +129,10 @@ class BaseProject(ABC):
 
         return hyper_params
 
-    def __init_env(self):
-        env, video_callable = self.init_env()
-        if self.config.record:            
-            env = Monitor(
-                env=env,
-                directory=self.config.video_dir,
-                video_callable=video_callable,
-                force=True)
-            monitor_str = " with monitor"
-        else:
-            monitor_str = ""
-         
-        hues.success("Environment is initialized" + monitor_str)
+    def __init_env(self, hyper_params):
+        env = self.init_env(hyper_params)
+
+        hues.success("Environment is initialized")
             
         return env
 
@@ -182,7 +197,7 @@ class BaseProject(ABC):
         txt = hues.huestr(f'{path}').green.colorized
         hues.success("Saved hyperparameters to " + txt)
 
-    def __save_video(self):
+    def __save_video(self, *args, **kargs):
         dir_name = self.config.video_dir
 
         files = glob(os.path.join(dir_name, "*.mp4"))
@@ -195,7 +210,8 @@ class BaseProject(ABC):
     def run(self):
         self.__restore_wandb()
         hyper_params = self.__init_hyper_params()
-        env = self.__init_env()
+        env = self.__init_env(hyper_params)
+
         self.__set_seed(env)
 
         models = self.__init_models(env, hyper_params)
@@ -215,7 +231,7 @@ class BaseProject(ABC):
             wandb.watch(models_without_optims, log="parameters")
 
             try:
-                self.train(agent, self.config.render)
+                self.train(agent)
             except KeyboardInterrupt:
                 pass
 

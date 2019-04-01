@@ -4,7 +4,7 @@
 
 import gym
 import numpy as np
-from typing import List
+from typing import List, Callable
 from multiprocessing import Process, Pipe, cpu_count
 
 
@@ -184,24 +184,37 @@ class SubprocVecEnv(VecEnv):
     def __len__(self):
         return self.nenvs
 
-def make_sync_env(env_name: str, 
-             n_envs: int = cpu_count(), 
-             wrappers: List[gym.Wrapper] = [],
-             max_episode_steps = 0):
+def make_sync_env(
+    env_id: str, 
+    n_envs: int = cpu_count(), 
+    wrappers: List[gym.Wrapper] = [],
+    max_episode_steps = 0,
+    video_func: Callable = None,
+    video_callable: Callable = None):
 
-    def gen_env():
+    def gen_env(record: bool = False):
         def _thunk():
-            env = gym.make(env_name)
+            env = gym.make(env_id)
             if max_episode_steps:
                 env._max_episode_steps = max_episode_steps
             
             for wrapper in wrappers:
                 env = wrapper(env)
+            
+            if record:
+                env = video_func(env, video_callable=video_callable)
         
             return env
         return _thunk
 
-    envs = [gen_env() for i in range(n_envs)]
+    envs = []
+    for i in range(n_envs):
+        if i == 0:
+            envs.append(gen_env(record=True))
+        else:
+            envs.append(gen_env())
+        
+
     envs = SubprocVecEnv(envs)
 
     return envs

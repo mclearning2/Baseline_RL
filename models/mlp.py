@@ -3,8 +3,8 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from torch.distributions import Normal, MultivariateNormal
-from common.networks.initializer import init_linear_weights_xavier
+from torch.distributions import Normal, Categorical
+from models.initializer import init_linear_weights_xavier
 
 class MLP(nn.Module):
     """Baseline of Multi-layer perceptron"""
@@ -54,9 +54,10 @@ class MLP(nn.Module):
         return self.fcs(x)
 
 class NormalDistMLP(nn.Module):
-    """ Multi-layer Perceptron with distribution output.(Gaussian, Normal)
-        hidden layer size of mu, std is always same. 
-        But it can be seperated or shared network    
+    """ Multi-layer Perceptron with Normal distribution output
+        It is for continuous environment
+        It can be seperated or shared network
+        But hidden layer size of mu, std is always same.
     """
 
     def __init__(
@@ -79,7 +80,6 @@ class NormalDistMLP(nn.Module):
             sigma_activation (function): activation function of std or logstd(sigma)
             hidden_activation (function): activation function of hidden layers
             share_net (bool): whether using one network or sperate network
-            dist_type (str): Select distribution type ('normal', 'gaussian')
         '''
 
         super().__init__()
@@ -130,4 +130,47 @@ class NormalDistMLP(nn.Module):
             mu = self.mu(x)
             sigma = self.sigma(x)
 
+        
         return Normal(mu, sigma)
+
+class CategoricalMLP(nn.Module):
+    """ Multi-layer Perceptron with categorical distribution output 
+        It is for discrete environment
+        It can be seperated or shared network
+        But hidden layer size of mu, std is always same.
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        hidden_sizes: list,        
+        output_activation: Callable = nn.Softmax(), # identity
+        hidden_activation: Callable = nn.ReLU(),
+    ):
+        '''Initialization with xavier
+
+        Args:
+            input_size (int): size of input layer
+            output_size (int): size of output layer
+            hidden_sizes (list): sizes of hidden layers
+            output_activation (function): activation function of output layer
+            hidden_activation (function): activation function of hidden layers
+        '''
+
+        super().__init__()
+
+        self.fc = MLP(
+            input_size=input_size,
+            output_size=output_size,
+            hidden_sizes=hidden_sizes,
+            output_activation=output_activation,
+            hidden_activation=hidden_activation
+        )
+
+        self.apply(init_linear_weights_xavier)
+    
+    def forward(self, x):
+        output = self.fc(x)
+        
+        return Categorical(output)

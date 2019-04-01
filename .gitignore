@@ -1,0 +1,10 @@
+.mypy_cache
+.vscode
+__pycache__
+report
+*.ps1
+*.pyc
+*.json
+*.jsonl
+venv
+wandb

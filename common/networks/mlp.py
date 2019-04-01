@@ -3,94 +3,131 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from torch.distributions import Normal
+from torch.distributions import Normal, MultivariateNormal
 from common.networks.initializer import init_linear_weights_xavier
 
-
 class MLP(nn.Module):
-    """ Multi-layer Perceptron """
+    """Baseline of Multi-layer perceptron"""
 
     def __init__(
         self,
         input_size: int,
-        output_size: int,
         hidden_sizes: list,
+        output_size: int = 0,
+        output_activation: Callable = nn.Sequential(), # identity
         hidden_activation: Callable = nn.ReLU(),
-        output_activation: Callable = nn.Sequential(),  # identity
     ):
-        super(MLP, self).__init__()
+        """Initialization with xavier
+
+        Args:
+            input_size (int): size of input layer
+            output_size (int): size of output layer. if zero, it is not used
+            hidden_sizes (list): sizes of hidden layers
+            output_activation (function): activation function of output layer
+            hidden_activation (function): activation function of hidden layers
+            use_output_layer (bool): whether or not to use the last layer 
+                                     for using subclass
+        """
+
+        super().__init__()
 
         self.fcs = nn.Sequential()
 
         # Hidden Layers
+        # ========================================================================
         prev_size = input_size
         for i, next_size in enumerate(hidden_sizes):
-            self.fcs.add_module(f"fc_{i}", nn.Linear(prev_size, next_size))
-            self.fcs.add_module(f"fc_act_{i}", hidden_activation)
+            self.fcs.add_module(f"hidden_fc{i}", nn.Linear(prev_size, next_size))
+            self.fcs.add_module(f"hidden_fc_act{i}", hidden_activation)
             prev_size = next_size
 
         # Output Layers
-        self.fcs.add_module("output", nn.Linear(prev_size, output_size))
-        self.fcs.add_module("output_act", output_activation)
-
-        # Initialize weights and biases
+        # ========================================================================
+        if output_size:
+            self.fcs.add_module(f"output", nn.Linear(prev_size, output_size))
+            self.fcs.add_module(f"output_act", output_activation)
+        
         self.apply(init_linear_weights_xavier)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor):
+        """Forward method implementation"""
         return self.fcs(x)
 
-
-class DistributedMLP(nn.Module):
-    """ Multi-layer Perceptron """
+class NormalDistMLP(nn.Module):
+    """ Multi-layer Perceptron with distribution output.(Gaussian, Normal)
+        hidden layer size of mu, std is always same. 
+        But it can be seperated or shared network    
+    """
 
     def __init__(
         self,
         input_size: int,
+        hidden_sizes: list,
         output_size: int,
-        mu_hidden_sizes: list,
-        sigma_hidden_sizes: list,
-        mu_hidden_activation: Callable = nn.ReLU(),
-        sigma_hidden_activation: Callable = nn.ReLU(),
-        mu_output_activation: Callable = nn.Sequential(),  # identity
-        sigma_output_activation: Callable = nn.Softplus(),
+        mu_activation: Callable = nn.Sequential(), # identity
+        sigma_activation: Callable = nn.Sequential(), # identity
+        hidden_activation: Callable = nn.ReLU(),
+        share_net: bool = True,
     ):
-        super(DistributedMLP, self).__init__()
+        '''Initialization with xavier
 
-        self.mu_fcs = nn.Sequential()
+        Args:
+            input_size (int): size of input layer
+            output_size (int): size of output layer
+            hidden_sizes (list): sizes of hidden layers
+            mu_activation (function): activation function of mean(mu)
+            sigma_activation (function): activation function of std or logstd(sigma)
+            hidden_activation (function): activation function of hidden layers
+            share_net (bool): whether using one network or sperate network
+            dist_type (str): Select distribution type ('normal', 'gaussian')
+        '''
 
-        # Mu Hidden Layers
-        prev_size = input_size
-        for i, next_size in enumerate(mu_hidden_sizes):
-            self.mu_fcs.add_module(f"fc_{i}", nn.Linear(prev_size, next_size))
-            self.mu_fcs.add_module(f"fc_act_{i}", mu_hidden_activation)
-            prev_size = next_size
+        super().__init__()
 
-        # Mu Output Layers
-        self.mu_fcs.add_module("output", nn.Linear(prev_size, output_size))
-        self.mu_fcs.add_module("output_act", mu_output_activation)
+        self.share_net = share_net
 
-        self.sigma_fcs = nn.Sequential()
+        if share_net:
+            self.hidden_layer = MLP(
+                input_size=input_size,
+                hidden_sizes=hidden_sizes,
+                hidden_activation=hidden_activation,
+            )
 
-        # Sigma Hidden Layers
-        prev_size = input_size
-        for i, next_size in enumerate(sigma_hidden_sizes):
-            self.sigma_fcs.add_module(f"fc_{i}",
-                                      nn.Linear(prev_size, next_size))
-            self.sigma_fcs.add_module(f"fc_act_{i}", sigma_hidden_activation)
-            prev_size = next_size
+            self.mu = nn.Sequential(
+                                nn.Linear(hidden_sizes[-1], output_size),
+                                mu_activation
+                            )
 
-        # Mu Output Layers
-        self.sigma_fcs.add_module("output", nn.Linear(prev_size, output_size))
-        self.sigma_fcs.add_module("output_act", sigma_output_activation)
+            self.sigma = nn.Sequential(
+                                nn.Linear(hidden_sizes[-1], output_size),
+                                sigma_activation
+                            )
+        else:
+            self.mu = MLP(
+                input_size=input_size,
+                output_size=output_size,
+                hidden_sizes=hidden_sizes,
+                output_activation=mu_activation,
+                hidden_activation=hidden_activation
+            )
+            self.sigma = MLP(
+                input_size=input_size,
+                output_size=output_size,
+                hidden_sizes=hidden_sizes,
+                output_activation=sigma_activation,
+                hidden_activation=hidden_activation
+            )
 
-        # Initialize weights and biases
         self.apply(init_linear_weights_xavier)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-
-        x = x.squeeze()
-
-        mu = self.mu_fcs(x)
-        sigma = self.sigma_fcs(x) + 1e-5
+    
+    def forward(self, x):
+        if self.share_net:
+            hidden_layer = self.hidden_layer.forward(x)
+            
+            mu = self.mu(hidden_layer)
+            sigma = self.sigma(hidden_layer)
+        else:
+            mu = self.mu(x)
+            sigma = self.sigma(x)
 
         return Normal(mu, sigma)

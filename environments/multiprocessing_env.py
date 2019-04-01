@@ -1,11 +1,11 @@
 # This code is from openai baseline
 # https://github.com/openai/baselines/tree/master/baselines/common/vec_env
-# And add 'seed' function for training reproducing
-# And add 'monitor' function for recording
-# by mclearning2
+# And add 'seed' function for training reproducing by mclearning2
 
+import gym
 import numpy as np
-from multiprocessing import Process, Pipe
+from typing import List
+from multiprocessing import Process, Pipe, cpu_count
 
 
 def worker(remote, parent_remote, env_fn_wrapper):
@@ -183,3 +183,26 @@ class SubprocVecEnv(VecEnv):
 
     def __len__(self):
         return self.nenvs
+
+def make_sync_env(env_name: str, 
+             n_envs: int = cpu_count(), 
+             wrappers: List[gym.Wrapper] = [],
+             max_episode_steps = 0):
+
+    def gen_env():
+        def _thunk():
+            env = gym.make(env_name)
+            if max_episode_steps:
+                env._max_episode_steps = max_episode_steps
+            
+            for wrapper in wrappers:
+                env = wrapper(env)
+        
+            return env
+        return _thunk
+
+    envs = [gen_env() for i in range(n_envs)]
+    envs = SubprocVecEnv(envs)
+
+    return envs
+    

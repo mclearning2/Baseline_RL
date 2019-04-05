@@ -1,12 +1,14 @@
 # This code is from openai baseline
 # https://github.com/openai/baselines/tree/master/baselines/common/vec_env
 # And add 'seed' function for training reproducing by mclearning2
+# And add if _elapsed_steps is same with _max_episode_steps, reset but not done
 
 import gym
 import numpy as np
 from typing import List, Callable
 from multiprocessing import Process, Pipe, cpu_count
 
+from environments.normalizer import ActionNormalizer
 
 def worker(remote, parent_remote, env_fn_wrapper):
     parent_remote.close()
@@ -14,7 +16,7 @@ def worker(remote, parent_remote, env_fn_wrapper):
     while True:
         cmd, data = remote.recv()
         if cmd == 'step':
-            ob, reward, done, info = env.step(data)
+            ob, reward, done, info = env.step(data)                
             if done:
                 ob = env.reset()
             remote.send((ob, reward, done, info))
@@ -188,22 +190,24 @@ def make_sync_env(
     env_id: str, 
     n_envs: int = cpu_count(), 
     wrappers: List[gym.Wrapper] = [],
-    max_episode_steps = 0,
-    video_func: Callable = None,
-    video_callable: Callable = None):
+    max_episode_steps: int = None,
+    video_call_func: Callable = lambda x:x):
 
     def gen_env(record: bool = False):
         def _thunk():
             env = gym.make(env_id)
             if max_episode_steps:
                 env._max_episode_steps = max_episode_steps
-            
+
             for wrapper in wrappers:
                 env = wrapper(env)
             
+            if not isinstance(env.action_space, gym.spaces.Discrete):
+                env = ActionNormalizer(env)
+
             if record:
-                env = video_func(env, video_callable=video_callable)
-        
+                env = video_call_func(env)
+
             return env
         return _thunk
 

@@ -1,7 +1,6 @@
-import hues
 import wandb
+import numpy as np
 from abc import ABC, abstractmethod
-
 
 class BaseAgent(ABC):
     @abstractmethod
@@ -23,11 +22,11 @@ class BaseAgent(ABC):
     def write_log(self, **kargs):
         s = ""
         for name, value in kargs.items():
-            if isinstance(value, int):
+            if isinstance(value, (int, np.integer)):
                 s += f"{name} : {value} | "
             else:
                 s += f"{name} : {value:.3f} | "
             
-        hues.info(s)
+        print(s)
     
         wandb.log(kargs)

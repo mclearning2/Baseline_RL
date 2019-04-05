@@ -12,5 +12,5 @@ endif
 tuning:
 	for number in `seq 1 100000`; \
 	do \
-		python3 main.py --project $(project); \
+		python3 main.py --record --project $(project); \
 	done

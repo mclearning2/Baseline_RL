@@ -1,14 +1,14 @@
 import gym
-import hues
-import wandb
 import torch
 import numpy as np
+from copy import deepcopy
 from collections import deque
-from typing import List, Union
+from typing import List, Union, Tuple
 from common.abstract.base_agent import BaseAgent
-from torch.distributions import Normal, Categorical
+from torch.distributions import Normal
 
 class A2C(BaseAgent):
+    ''' A2C: Synchronous Advantage Actor Critic (called in Open AI) '''
     def __init__(
         self,
         env: Union[List[gym.Env], gym.Env],
@@ -17,12 +17,14 @@ class A2C(BaseAgent):
         actor_optim: torch.optim.Optimizer,
         critic_optim: torch.optim.Optimizer,
         device: str,
+        n_workers: int,
+        max_episode_steps: int,
         gamma: float = 0.99,
         entropy_rate: float = 0.001,
         rollout_len: int = 5,
         ):
 
-        ''' A2C: Synchronous Advantage Actor Critic (called in Open AI)
+        ''' Initialize
 
         Args:
             env (list[gym.Env] or gym.Env): 
@@ -42,36 +44,37 @@ class A2C(BaseAgent):
         self.actor, self.critic = actor, critic
         self.actor_optim, self.critic_optim = actor_optim, critic_optim
 
+        # Hyperparameters
+        self.max_episode_steps = max_episode_steps
+        self.n_workers = n_workers
         self.gamma = gamma
         self.ent_rate = entropy_rate
         self.rollout_len = rollout_len
 
-        self.values, self.log_probs, self.rewards, self.masks = [], [], [], []
+        self.values: list = []
+        self.log_probs: list = []
+        self.rewards: list = []
+        self.masks: list = []
         self.entropy = 0
 
-    def select_action(self, dist: Union[Normal, Categorical]):
-        state = torch.FloatTensor(dist).to(self.device)
+    def select_action(self, state: np.ndarray) -> np.ndarray:
+        
+        state = torch.FloatTensor(state).to(self.device)
         
         dist = self.actor.forward(state)
         value = self.critic.forward(state)
         
         action = dist.sample()
 
-        log_prob = dist.log_prob(action)
-        entropy = dist.entropy().mean()
-        
-        return action.cpu().numpy(), log_prob, value, entropy
-
-    def append_memory(self, value, log_prob, reward, done, entropy):
         self.values.append(value)
-        self.log_probs.append(log_prob)
-        self.rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(self.device))
-        self.masks.append(torch.FloatTensor(1-done).unsqueeze(1).to(self.device))
-        self.entropy += entropy      
+        self.log_probs.append(dist.log_prob(action))
+        self.entropy += dist.entropy().mean()
+        
+        return action.cpu().numpy()
 
     def compute_return(self, last_value):
         R = last_value
-        returns = []
+        returns = list()
         for step in reversed(range(len(self.rewards))):
             R = self.rewards[step] + self.gamma * R * self.masks[step]
             returns.insert(0, R)
@@ -91,7 +94,7 @@ class A2C(BaseAgent):
         advantage = returns - values
 
         actor_loss = -(log_probs * advantage.detach()).mean() \
-                    + self.ent_rate * self.entropy
+                    - self.ent_rate * self.entropy
         critic_loss = advantage.pow(2).mean()
 
         self.actor_optim.zero_grad()
@@ -102,58 +105,68 @@ class A2C(BaseAgent):
         critic_loss.backward()
         self.critic_optim.step()
 
-        self.values, self.log_probs, self.rewards, self.masks = [], [], [], []
+        self.values: list = []
+        self.log_probs: list = []
+        self.rewards: list = []
+        self.masks: list = []
         self.entropy = 0
 
-    def train(self, **kargs):
+    def train(self, recent_score_len, n_episode):
+        step = np.zeros(self.n_workers, dtype=np.int)
         score = 0
         episode = 0
         state = self.env.reset()
-        recent_scores = deque(maxlen=kargs['recent_score_len'])
-        while episode < kargs['n_episode']:
-            
-            self.entropy = 0
+        recent_scores = deque(maxlen=recent_score_len)
+
+        while episode < n_episode:
             for _ in range(self.rollout_len):
+                step += 1
 
-                action, log_prob, value, entropy = self.select_action(state)
+                action = self.select_action(state)
 
-                next_state, reward, done, _ = self.env.step(action)
+                next_state, reward, done, info = self.env.step(action)
 
-                self.append_memory(value, log_prob, reward, done, entropy)
-
+                done_bool = deepcopy(done)
+                if self.max_episode_steps:
+                    done_bool[np.where(step == self.max_episode_steps)] = False
+                
+                self.rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(self.device))
+                self.masks.append(torch.FloatTensor(1-done_bool).unsqueeze(1).to(self.device))
+                                
                 state = next_state
-                episode += int(done[0])
                 score += reward[0]
+                episode += done.sum()
 
                 if done[0]:
+                    print(type(episode), type(score), type(step[0]), type(recent_scores))
                     recent_scores.append(score)
                     self.write_log(
                         episode=episode,
                         score=score,
+                        steps=step[0],
                         recent_scores=np.mean(recent_scores)
-                    )                    
+                    )
                     score = 0
+
+                step[np.where(done)] = 0
             
             self.train_model(state)
 
-    def test(self, **kargs):
-        for episode in range(kargs['n_episode']):
+    def test(self, n_episode, render):
+        for ep in range(n_episode):
             state = self.env.reset()
-
             score = 0
             done = False
             while not done:
-                action, _, _, _ = self.select_action(state)
+                if render:
+                    self.env.render()
+                action = select_action(state)
 
-                next_state, reward, done, info = self.env.step(action)
+                next_state, reward, done, _ = self.env.step(action)
 
                 score += reward
-                state = next_state
 
-                if kargs['render']:
-                    self.env.render()
-            
-            print(f"score : {score}")
+            print("score", score)
 
         
             

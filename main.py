@@ -6,7 +6,7 @@
 import os
 import importlib
 
-from common.utils.parse import get_config_and_module
+from common.parse import get_config_and_module
 
 from pyfiglet import Figlet
 

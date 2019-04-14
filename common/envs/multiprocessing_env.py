@@ -1,14 +1,11 @@
 # This code is from openai baseline
 # https://github.com/openai/baselines/tree/master/baselines/common/vec_env
 # And add 'seed' function for training reproducing by mclearning2
-# And add if _elapsed_steps is same with _max_episode_steps, reset but not done
+# And add 'get_max_episode_steps' function added for last state done check
 
 import gym
 import numpy as np
-from typing import List, Callable
 from multiprocessing import Process, Pipe, cpu_count
-
-from environments.normalizer import ActionNormalizer
 
 def worker(remote, parent_remote, env_fn_wrapper):
     parent_remote.close()
@@ -28,6 +25,8 @@ def worker(remote, parent_remote, env_fn_wrapper):
         elif cmd == 'reset_task':
             ob = env.reset_task()
             remote.send(ob)
+        elif cmd == 'render':
+            env.render()
         elif cmd == 'close':
             remote.close()
             break
@@ -35,7 +34,6 @@ def worker(remote, parent_remote, env_fn_wrapper):
             remote.send((env.observation_space, env.action_space))
         else:
             raise NotImplementedError
-
 
 class VecEnv(object):
     """
@@ -104,10 +102,11 @@ class CloudpickleWrapper(object):
 
 
 class SubprocVecEnv(VecEnv):
-    def __init__(self, env_fns, spaces=None):
+    def __init__(self, env_fns, max_episode_steps=0, spaces=None):
         """
         envs: list of gym environments to run in subprocesses
         """
+        self.max_episode_steps=max_episode_steps
         self.waiting = False
         self.closed = False
         nenvs = len(env_fns)
@@ -136,6 +135,9 @@ class SubprocVecEnv(VecEnv):
         observation_space, action_space = self.remotes[0].recv()
         VecEnv.__init__(self, len(env_fns), observation_space, action_space)
 
+    def get_max_episode_steps(self):
+        return self.max_episode_steps
+
     def step_async(self, actions):
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
@@ -156,6 +158,11 @@ class SubprocVecEnv(VecEnv):
         for remote, seed in zip(self.remotes, seeds):
             remote.send(('seed', seed))
         self.waiting = True
+
+    def render(self):
+        for remote in self.remotes:
+            remote.send(('render', None))
+        self.waiting = False
 
     def env(self):
         def close():
@@ -185,41 +192,4 @@ class SubprocVecEnv(VecEnv):
 
     def __len__(self):
         return self.nenvs
-
-def make_sync_env(
-    env_id: str, 
-    n_envs: int = cpu_count(), 
-    wrappers: List[gym.Wrapper] = [],
-    max_episode_steps: int = None,
-    video_call_func: Callable = lambda x:x):
-
-    def gen_env(record: bool = False):
-        def _thunk():
-            env = gym.make(env_id)
-            if max_episode_steps:
-                env._max_episode_steps = max_episode_steps
-
-            for wrapper in wrappers:
-                env = wrapper(env)
-            
-            if not isinstance(env.action_space, gym.spaces.Discrete):
-                env = ActionNormalizer(env)
-
-            if record:
-                env = video_call_func(env)
-
-            return env
-        return _thunk
-
-    envs = []
-    for i in range(n_envs):
-        if i == 0:
-            envs.append(gen_env(record=True))
-        else:
-            envs.append(gen_env())
-        
-
-    envs = SubprocVecEnv(envs)
-
-    return envs
     

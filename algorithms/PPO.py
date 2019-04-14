@@ -1,46 +1,25 @@
 import gym
 import torch
 import numpy as np
-from copy import deepcopy
-from collections import deque
-from typing import List, Union
+from typing import List, Union, Dict
 from common.abstract.base_agent import BaseAgent
 
 class PPO(BaseAgent):
     def __init__(
         self,
         env: Union[List[gym.Env], gym.Env],
-        actor: torch.nn.Module,
-        critic: torch.nn.Module,
-        actor_optim: torch.optim.Optimizer,
-        critic_optim: torch.optim.Optimizer,
+        models: Dict[str, Union[torch.nn.Module, torch.optim.Optimizer]],
         device: str,
-        max_episode_steps: int,
-        n_workers: int,
-        gamma: float,
-        tau: float,
-        epsilon: float,
-        entropy_rate: float,
-        rollout_len: int,
-        epoch: int,
-        mini_batch_size: int
+        hyper_params: dict
     ):
         self.env = env
-
         self.device = device
-        self.actor, self.critic = actor, critic
-        self.actor_optim, self.critic_optim = actor_optim, critic_optim
+        self.actor, self.critic = models['actor'], models['critic']
+        self.actor_optim = models['actor_optim']
+        self.critic_optim = models['critic_optim']
 
         # Hyperparameters
-        self.max_episode_steps = max_episode_steps
-        self.n_workers = n_workers
-        self.gamma = gamma
-        self.tau = tau
-        self.epsilon = epsilon
-        self.ent_rate = entropy_rate
-        self.rollout_len = rollout_len
-        self.epoch = epoch
-        self.mini_batch_size = mini_batch_size
+        self.hp = hyper_params
 
         self.states: list = []
         self.actions: list = []
@@ -66,15 +45,16 @@ class PPO(BaseAgent):
         return action.cpu().numpy()
 
     def compute_gae(self, last_value):
+        gamma, tau = self.hp['gamma'], self.hp['tau']
+
         values = self.values + [last_value]
         gae = 0
         returns = list()
 
         for step in reversed(range(len(self.rewards))):
-            delta = self.rewards[step] \
-                  + self.gamma * values[step + 1] * self.masks[step] \
+            delta = self.rewards[step] + gamma * values[step + 1] * self.masks[step] \
                   - values[step]
-            gae = delta + self.gamma * self.tau * self.masks[step] * gae
+            gae = delta + gamma * tau * self.masks[step] * gae
             returns.insert(0, gae + values[step])
 
         return returns
@@ -84,9 +64,10 @@ class PPO(BaseAgent):
         # Because states is stacked by multiprocessing environment
         # So states.size(0) = rollout_len * n_workers
         batch_size = states.size(0)
+        mini_batch_size = self.hp['mini_batch_size']
 
-        for _ in range(batch_size // self.mini_batch_size):
-            random_indices = np.random.randint(0, batch_size, self.mini_batch_size)
+        for _ in range(batch_size // mini_batch_size):
+            random_indices = np.random.randint(0, batch_size, mini_batch_size)
             yield states[random_indices, :], \
                   actions[random_indices, :], \
                   log_probs[random_indices, :], \
@@ -94,7 +75,11 @@ class PPO(BaseAgent):
                   advantage[random_indices, :]
     
     def ppo_update(self, states, actions, log_probs, returns, advantage):
-        for _ in range(self.epoch):
+        epsilon = self.hp['epsilon']
+        entropy_ratio = self.hp['entropy_ratio']
+        epoch = self.hp['epoch']
+
+        for _ in range(epoch):
             for state, action, old_log_probs, return_, adv in \
                 self.ppo_iter(states, actions, log_probs, returns, advantage):
 
@@ -106,14 +91,12 @@ class PPO(BaseAgent):
                 ratio = (new_log_probs - old_log_probs).exp()                
                 
                 surr_loss = ratio * adv
-                clipped_surr_loss = torch.clamp(
-                    ratio, 1.0-self.epsilon, 1.0+self.epsilon
-                ) * adv
+                clipped_surr_loss = torch.clamp(ratio, 1.0-epsilon, 1.0+epsilon) * adv
 
                 entropy = dist.entropy().mean()                
 
                 actor_loss = - torch.min(surr_loss, clipped_surr_loss).mean() \
-                             - self.ent_rate * entropy
+                             - entropy_ratio * entropy
                 
                 self.actor_optim.zero_grad()
                 actor_loss.backward()
@@ -151,59 +134,29 @@ class PPO(BaseAgent):
         self.values, self.log_probs, self.rewards, self.masks = [], [], [], []
         self.states, self.actions = [], []
 
-    def train(self, recent_score_len, n_episode):
-        step = np.zeros(self.n_workers, dtype=np.int)
-        episode = 0
+    def train(self):
         state = self.env.reset()
-        recent_scores = deque(maxlen=recent_score_len)
 
-        while episode < n_episode:
-            score = 0
-            
-            for _ in range(self.rollout_len):
-                step += 1
-                
+        while self.env.episodes[0] < self.env.max_episode:
+            for _ in range(self.hp['rollout_len']):
                 action = self.select_action(state)
+                
                 
                 next_state, reward, done, info = self.env.step(action)
 
-                done_bool = deepcopy(done)
-                if self.max_episode_steps:
-                    done_bool[np.where(step == self.max_episode_steps)] = False
-                
-                self.rewards.append(torch.FloatTensor(reward).unsqueeze(1).to(self.device))
-                self.masks.append(torch.FloatTensor(1-done_bool).unsqueeze(1).to(self.device))
-                                
+                reward = torch.FloatTensor(reward).unsqueeze(1).to(self.device)
+                done = torch.FloatTensor(done.astype(np.float)).unsqueeze(1).to(self.device)
+                self.rewards.append(reward)
+                self.masks.append(1-done)  
+
                 state = next_state
-                score += reward[0]
-                episode += done.sum()
 
                 if done[0]:
-                    recent_scores.append(score)
                     self.write_log(
-                        episode=episode,
-                        score=score,
-                        steps=step[0],
-                        recent_scores=np.mean(recent_scores)
+                        episode=self.env.episodes[0],
+                        score=self.env.scores[0],
+                        steps=self.env.steps[0],
+                        recent_scores=np.mean(self.env.recent_scores)
                     )
-                    score = 0
 
-                step[np.where(done)] = 0
-                
             self.train_model(state)
-
-    def test(self, n_episode, render):
-        for ep in range(n_episode):
-            state = self.env.reset()
-            score = 0
-            done = False
-            while not done:
-                if render:
-                    self.env.render()
-                action = select_action(state)
-
-                next_state, reward, done, _ = self.env.step(action)
-
-                score += reward
-
-            print("score", score)

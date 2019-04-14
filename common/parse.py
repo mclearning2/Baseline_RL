@@ -60,12 +60,18 @@ def get_config_and_module():
 
     # Initialize path to save information by project name
     v_dir = os.path.join(config.report_dir, 'videos', config.project)
-    p_path = os.path.join(config.report_dir, 'models', config.project, 'model.pt')
-    hp_path = os.path.join(config.report_dir, 'models', config.project, 'hyperparams.pkl')
+    p_path = os.path.join(config.report_dir, 'model', config.project, 'model.pt')
+    hp_path = os.path.join(config.report_dir, 'model', config.project, 'hyperparams.pkl')
 
     config.video_dir = v_dir
     config.params_path = p_path
     config.hyperparams_path = hp_path
+
+    print("Parsing parameters")
+    print("=" * 70)
+    for key, value in vars(config).items():
+        print(key, "=",value)
+    print("=" * 70)
 
     return config, module
 

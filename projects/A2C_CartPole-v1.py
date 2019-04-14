@@ -1,85 +1,47 @@
-import gym
-import multiprocessing
-import numpy as np
+import torch.nn as nn
 import torch.optim as optim
+from torch.distributions import Categorical
 
-from environments.multiprocessing_env import make_sync_env
-from models.mlp import CategoricalMLP, MLP
+from common.envs.core import GymEnv
 from common.abstract.base_project import BaseProject
-
+from common.models.mlp import SepActorCritic
 from algorithms.A2C import A2C
 
 class Project(BaseProject):
     def init_hyper_params(self):
         return {
             "gamma": 0.99,
-            "entropy_rate": 0.001,
-            "rollout_len": 20,
-            "n_workers": 1,#multiprocessing.cpu_count(),
-            "max_episode_steps": None,
-            "actor_lr": 0.01,
-            "critic_lr": 0.05,
-            "actor_hidden_sizes": [],
-            "critic_hidden_sizes": [],
+            "entropy_ratio": 0.001,
+            "rollout_len": 5,
+            "n_workers": 4,
+            "max_episode_steps": 0,
+            "learning_rate": 0.005,
+            "hidden_sizes": [24],
         }
 
-    def init_env(self, hyper_params):
-        env_id = 'CartPole-v1'
-        if self.test_mode:
-            env = gym.make(env_id)
-        else:
-            env = make_sync_env(
-                env_id, 
-                n_envs=hyper_params['n_workers'],
-                max_episode_steps=hyper_params['max_episode_steps'],
-                video_call_func=self.monitor_func(lambda x:x % 20 == 0)
-            )
-        
-        return env
+    def init_env(self, hyper_params, render_on, monitor_func):
+        return GymEnv(
+            env_id = 'CartPole-v1', 
+            n_envs = hyper_params['n_workers'],
+            render_on = render_on,
+            max_episode = 300,
+            max_episode_steps = hyper_params['max_episode_steps'],
+            monitor_func = monitor_func(None)
+        )
 
-    def init_models(self, input_size, output_size, hyper_params):
-        actor = CategoricalMLP(
+    def init_model(self, input_size, output_size, hyper_params):
+        model = SepActorCritic(
             input_size=input_size,
-            output_size=output_size,
-            hidden_sizes=hyper_params['actor_hidden_sizes'],
+            actor_output_size=output_size,
+            critic_output_size=1,
+            hidden_sizes=hyper_params['hidden_sizes'],
+            actor_output_activation=nn.Softmax(),
+            dist=Categorical,
         ).to(self.device)
 
-        critic = MLP(
-            input_size=input_size,
-            output_size=1,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
-        ).to(self.device)
+        optimizer = optim.Adam(model.parameters(), hyper_params['learning_rate'])
 
-        actor_optim = optim.Adam(actor.parameters(), hyper_params['actor_lr'])
-        critic_optim = optim.Adam(critic.parameters(), hyper_params['critic_lr'])
+        return model, optimizer
 
-        return {"actor": actor, "critic": critic,
-                "actor_optim": actor_optim, "critic_optim": critic_optim}
-
-    def init_agent(self, env, models, device, hyper_params):
-
-        return A2C(
-            env=env,
-            actor=models['actor'],
-            critic=models['critic'],
-            actor_optim=models['actor_optim'],
-            critic_optim=models['critic_optim'],
-            device=device,
-            max_episode_steps=hyper_params["max_episode_steps"],
-            n_workers=hyper_params['n_workers'],
-            gamma=hyper_params['gamma'],
-            entropy_rate=hyper_params['entropy_rate'],
-            rollout_len=hyper_params['rollout_len']
-        )
-
-    def train(self, agent):
-        agent.train(
-            n_episode=1000,
-            recent_score_len=30,
-        )
-
-    def test(self, agent, render):
-        agent.test(
-            n_episode=10,
-            render=render
-        )
+    def init_agent(self, env, model, optim, device, hyper_params):
+        return A2C(env, model, optim, device, hyper_params)

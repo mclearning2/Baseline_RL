@@ -1,26 +1,27 @@
 import os
-import sys
 import gym
 import wandb
 import torch
 import pickle
-import random
 import numpy as np
 from glob import glob
-from typing import Tuple, Dict, Union, Callable
+from typing import Tuple, Union, Callable
 from gym.wrappers import Monitor
 from abc import ABC, abstractmethod
-from common.utils.path import check_or_make_dir
+
+from common.envs.core import GymEnv
+from torch.distributions import Normal, Categorical
+from common.help_function import check_path_or_make_dir, set_random_seed, remove_dir
 
 class BaseProject(ABC):
-    ''' 구현한 알고리즘이 좀 더 쉽게 원하는 환경에 적용될 수 있게 지원하는 프로젝트
-        기본적으로 구현에 있어 필요한 것들
+    ''' Baseline of project that helps to implementation of various experiment.
+
+    What you need to implement
+        - init_hyper_params(self)
+        - init_env(self, hyper_params, render_on, monitor_func)
+        - init_model(self, input_size, output_size, hyper_params)
+        - init_agent(self, env, model, optim, device, hyper_params)
     
-    Functions to need to implement :
-        init_hyper_params() -> dict
-            : logging을 위해 기록해야할 hyperparameter
-        init_env: 모델이 학습할 OpenAI atari gym. 
-        init_models: agent
     '''
     def __init__(self, config):
 
@@ -45,60 +46,79 @@ class BaseProject(ABC):
 
     @abstractmethod
     def init_hyper_params(self) -> dict:
-        ''' hyperparameter를 dictionary에 담고 반환
-
-            config.restore가 true인 경우 이 변수 대신 report/{project}/hyperparams.pkl
-            에서 불러온 변수를 사용한다.
+        ''' Implement and return hyperparameters.
+            if config.restore == True, It's restored from self.hyperparams_path
         
         Example:
             return { "gamma": 0.9531 }
-
         '''
 
     @abstractmethod
-    def init_env(self, hyper_params) -> Tuple[gym.Env]:
-        ''' 환경을 구현 후 반환
-            
-            이후 env.seed(..)형태로 seed 결정 및
-            action_size 크기 결정. TODO: Atari같은 픽셀의 경우도 고려
+    def init_env(
+        self, 
+        render_on: bool,
+        monitor_func: Callable,
+        hyper_params: dict,
+    ) -> GymEnv:
+        ''' Implement and return environment class(GymEnv).
+
+        Args:
+            render_on: Whether environment is render or not.
+            monitor_func: Recording function. argument is video_callable
+                          It will be saved in self.video_dir
+            hyper_params: dictionary from self.init_hyper_params()
 
         Examples:
-            env = gym.make('Pendulum-v0')
-            return env
+            return GymEnv(
+                env_id = 'CartPole-v1', 
+                n_envs = hyper_params['n_workers'],
+                render_on = render_on,
+                max_episode = 300,
+                max_episode_steps = hyper_params['max_episode_steps'],
+                monitor_func = monitor_func(lambda x: x % 50 == 0)
+            )
         '''        
 
     @abstractmethod
-    def init_models(self, input_size, output_size, hyper_params) \
-            -> Dict[str, Union[torch.nn.Module, torch.optim.Optimizer]]:
-        ''' Agent가 사용할 모델을 구성후 반환
+    def init_model(
+        self, 
+        input_size: int,
+        output_size: int,
+        hyper_params: dict
+        ) -> Tuple[torch.nn.Module, torch.optim.Optimizer]:
+        ''' Implement and return [model, optim].
+
+        Args:
+            input_size: The input size of model
+            output_size: The input size of model
+            hyper_params: dictionary from self.init_hyper_params()
         
         Examples:
             model = MLP(...)
-            optimizer = optim(...)
+            optimr = optim(...)
 
-            return {'model': model, 'optim': optimizer} 
+            return model, optim
         '''
 
     @abstractmethod
-    def init_agent(self, env, models, device, hyper_params):
-        '''You must return agent
+    def init_agent(
+        self, 
+        env: GymEnv, 
+        model: torch.nn.Module, 
+        optim: torch.optim.Optimizer, 
+        device: str, 
+        hyper_params: dict
+    ):
+        '''Implement and return agent.
 
         Examples:
             return A2C(...)
-
         '''
-
-    @abstractmethod
-    def train(self, agent,):
-        pass
-
-    @abstractmethod
-    def test(self, agnet, render):
-        pass
 
     def monitor_func(self, video_callable=None, *args, **kargs):
         def func(env):
             if self.record:
+                print("[INFO] Video(mp4) will be saved in " + self.video_dir)
                 return Monitor(
                     env=env,
                     directory=self.video_dir,
@@ -107,8 +127,8 @@ class BaseProject(ABC):
                     *args,
                     **kargs
                 )
-            
             else:
+                remove_dir(self.video_dir)
                 return env
 
         return func
@@ -116,7 +136,7 @@ class BaseProject(ABC):
     def _restore_wandb(self):
         ''' wandb로부터 학습에 필요한 model과 hyperparameter를 복원
             복원하는 경로
-             - config.models_path
+             - config.model_path
              - config.hyper_params_path
         '''
 
@@ -124,7 +144,6 @@ class BaseProject(ABC):
             run_path = os.path.join(self.user_name, self.project, self.run_id)
 
             print(f"[INFO] Loaded from {run_path}")
-            #TODO: root와 name을 나누지 않아도 되는지
             for path in [self.params_path, self.hyperparams_path]:
                 root = os.path.dirname(path)
                 name = os.path.basename(path)
@@ -142,109 +161,110 @@ class BaseProject(ABC):
             config.restore 일 때만 반환하며 아닐 경우 None을 반환.
             만약 파일이 없을 경우 에러를 보이며 반환
         '''
-
-        #TODO 에러가 어떻게 나는지 확인
         if self.restore:
-            with open(self.hyper_params_path, 'rb') as f:
+            with open(self.hyperparams_path, 'rb') as f:
                 unpickler = pickle.Unpickler(f)
                 hyper_params = unpickler.load()
 
-                print("[INFO] Loaded hyperparameters from " + self.hyper_params_path)
+                print("[INFO] Loaded hyperparameters from " + self.hyperparams_path)
 
             return hyper_params
         else:
             print("[INFO] Initialized hyperparameters")
             return self.init_hyper_params()
 
-    def _set_seed(self, env):
-        env.seed(self.seed)
-        random.seed(self.seed)
-        torch.manual_seed(self.seed)
-        np.random.seed(self.seed)
-
-        print(f"[INFO] Seeds are set by {self.seed}")
-
-    def _init_models(self, env, hyper_params):
-        if isinstance(env.action_space, gym.spaces.Discrete):
-            action_size = env.action_space.n
-        elif isinstance(env.action_space, gym.spaces.Box):
-            action_size = env.action_space.shape[0]
-
-        models = self.init_models(
-                    input_size=env.observation_space.shape[0], 
-                    output_size=action_size,
+    def _init_model(self, env, hyper_params):
+        model, optim = self.init_model(
+                    input_size=env.state_size, 
+                    output_size=env.action_size,
                     hyper_params=hyper_params
                 )
-
+        # Make sure the distribution is suitable for the environment.
+        # discret : Categorical distribution
+        # continuous : Normal distribution
+        if env.is_discrete:
+            # Check if distribution is categorical
+            assert model.dist == Categorical, \
+                   "Model distribution must be Categorical, but " + str(model.dist)
+        else:
+            assert model.dist == Normal, \
+                   "Model distribution must be Normal, but " + str(model.dist)
+        
         if self.restore:
-            #TODO: 파일이 없을 경우 에러 구하기
             params = torch.load(self.params_path)
-            for name in params.keys():
-                models[name].load_state_dict(params[name])
+            
+            model.load_state_dict(params['model'])
+            optim.load_state_dict(params['optim'])
 
             print("[INFO] Loaded model and optimizer from " + self.params_path)
         else:
-            print("[INFO] Initialized models ")
+            print("[INFO] Initialized model ")
         
-        return models
+        return model, optim
 
-    def _save_model(self, models):
-        check_or_make_dir(self.params_path)
-
-        params = {name: tensor.state_dict() for name, tensor in models.items()}
+    def _save_model(self, model, optim):
+        check_path_or_make_dir(self.params_path)
+        
+        params = {'model': model.state_dict(), 'optim': optim.state_dict()}
 
         torch.save(params, self.params_path)
-        wandb.save(self.params_path)
 
         print("[INFO] Saved model and optimizer to " + self.params_path)
 
     def _save_hyper_params(self, hyper_params):
-        check_or_make_dir(self.hyperparams_path)
+        check_path_or_make_dir(self.hyperparams_path)
 
         with open(self.hyperparams_path, 'wb+') as f:
             pickle.dump(hyper_params, f)
-            wandb.save(self.hyperparams_path)
 
         print("[INFO] Saved hyperparameters to " + self.hyperparams_path)
 
-    def _save_video(self):
+    def _save_wandb(self):
+        wandb.save(self.params_path)
+        wandb.save(self.hyperparams_path)
         files = glob(os.path.join(self.video_dir, "*.mp4"))
         for mp4_file in files:
             wandb.save(mp4_file)
 
-        print("[INFO] Saved recorded videos to " + self.video_dir)
-
     def run(self):
+        # == Restore from cloud == #
         self._restore_wandb()
         
+        # == Hyper parameters == #
         hyper_params = self._init_hyper_params()
-        env = self.init_env(hyper_params)
 
-        self._set_seed(env)
+        # == Environment == #
+        env = self.init_env(hyper_params, self.render, self.monitor_func)
+        print(f"[INFO] Initialized environment")
 
-        models = self._init_models(env, hyper_params)
-        agent = self.init_agent(env, models, self.device, hyper_params)
+        set_random_seed(env, self.seed)
+        print(f"[INFO] Seeds are set by {self.seed}")
+
+        # == Model == #
+        model, optim = self._init_model(env, hyper_params)
+
+        # == Agent == #
+        agent = self.init_agent(env, model, optim, self.device, hyper_params)
         print("[INFO] Initialized agent")
 
+        # == Train or Test == *
         if self.test_mode:
             print("[INFO] Starting test...")
-            self.test(agent, self.render)
+            agent.test()
         else:
             print("[INFO] Starting train...")
-            wandb.init(project=self.project, config=hyper_params)
 
-            params = [model for model in models.values() \
-                            if isinstance(model, torch.nn.Module)]
-
-            wandb.watch(params, log="parameters")
+            wandb.init(project=self.project, config=hyper_params, dir='report')
+            wandb.watch(model, log="parameters")
 
             try:
-                self.train(agent)
+                agent.train()
             except KeyboardInterrupt:
                 pass
 
-            self._save_model(models)
+            # Save 
+            self._save_model(model, optim)
             self._save_hyper_params(hyper_params)
-            self._save_video()
+            self._save_wandb()
         
         env.close()

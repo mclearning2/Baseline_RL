@@ -13,10 +13,12 @@ class Project(BaseProject):
             "gamma": 0.99,
             "entropy_ratio": 0.001,
             "rollout_len": 5,
+            
             "n_workers": 4,
             "max_episode_steps": 0,
             "learning_rate": 0.005,
-            "hidden_sizes": [24],
+            "actor_hidden_sizes": [24],
+            "critic_hidden_sizes": [24],
         }
 
     def init_env(self, hyper_params, render_on, monitor_func):
@@ -26,22 +28,23 @@ class Project(BaseProject):
             render_on = render_on,
             max_episode = 300,
             max_episode_steps = hyper_params['max_episode_steps'],
-            monitor_func = monitor_func(None)
+            monitor_func = monitor_func(lambda x: x % 50 == 0)
         )
 
-    def init_model(self, input_size, output_size, hyper_params):
+    def init_model(self, input_size, output_size, device, hyper_params):
         model = SepActorCritic(
             input_size=input_size,
             actor_output_size=output_size,
             critic_output_size=1,
-            hidden_sizes=hyper_params['hidden_sizes'],
+            actor_hidden_sizes=hyper_params['actor_hidden_sizes'],
+            critic_hidden_sizes=hyper_params['critic_hidden_sizes'],
             actor_output_activation=nn.Softmax(),
             dist=Categorical,
-        ).to(self.device)
+        ).to(device)
 
         optimizer = optim.Adam(model.parameters(), hyper_params['learning_rate'])
 
-        return model, optimizer
+        return {'model': model, 'optim': optimizer}
 
-    def init_agent(self, env, model, optim, device, hyper_params):
-        return A2C(env, model, optim, device, hyper_params)
+    def init_agent(self, env, model, device, hyper_params):
+        return A2C(env, model['model'], model['optim'], device, hyper_params)

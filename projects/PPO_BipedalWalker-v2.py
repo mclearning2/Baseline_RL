@@ -11,30 +11,30 @@ from algorithms.PPO import PPO
 class Project(BaseProject):
     def init_hyper_params(self):
         return {
-            "gamma": 0.9204,
-            "tau": 0.9094,
-            "epsilon": 0.389,
+            "gamma": 0.99,
+            "tau": 0.95,
+            "epsilon": 0.3105,
             "entropy_ratio": 0.001,
-            "rollout_len": 14,
-            "batch_size": 92,
-            "epoch": 17,
-            "n_workers": 8,
+            "rollout_len": 30,
+            "batch_size": 87,
+            "epoch": 22,
+            
+            "n_workers": 10,
             "max_episode_steps": 0,
-            "actor_lr": 0.001238,
-            "critic_lr": 0.00215,
-            "actor_hidden_sizes": [41],
-            "critic_hidden_sizes": [61, 61],
+            "actor_lr": 0.005262,
+            "critic_lr": 0.008651,
+            "actor_hidden_sizes": [29],
+            "critic_hidden_sizes": [],
         }
     
     def init_env(self, hyper_params, render_on, monitor_func):
         return GymEnv(
-            env_id='Pendulum-v0', 
+            env_id='BipedalWalker-v2', 
             n_envs=hyper_params['n_workers'],
             render_on=render_on,
-            max_episode=500,
+            max_episode= 300,
             max_episode_steps=hyper_params['max_episode_steps'],
             monitor_func=monitor_func(lambda x: x % 50 == 0),
-            action_scale=True
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

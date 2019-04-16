@@ -35,8 +35,9 @@ class BaseAgent(ABC):
 
             state = next_state
 
-            if done[0]:
-                print("score", self.env.scores[0])
+            for i, d in enumerate(done):
+                if d:
+                    print('score', self.env.scores[i])
 
     def write_log(self, **kargs):
         """ Write print and logging.

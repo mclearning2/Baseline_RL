@@ -47,8 +47,8 @@ class MLP(nn.Module):
         # Output Layers
         # ===========================================================================
         if output_size > 0:
-            self.fcs.add_module(f"output{i}", nn.Linear(prev_size, output_size))
-            self.fcs.add_module(f"output_act{i}", output_activation)
+            self.fcs.add_module(f"output", nn.Linear(prev_size, output_size))
+            self.fcs.add_module(f"output_act", output_activation)
 
         # Initialized
         self.apply(init_linear_weights_xavier)
@@ -63,13 +63,15 @@ class SepActorCritic(nn.Module):
     def __init__(
         self,
         input_size: int,
-        hidden_sizes: list,
+        actor_hidden_sizes: list,
+        critic_hidden_sizes: list,
         actor_output_size: int,
         critic_output_size: int,
         dist: Union[Normal, Categorical],
         hidden_activation: Callable = nn.ReLU(),
         actor_output_activation: Callable = nn.Sequential(), # identity
         critic_output_activation: Callable = nn.Sequential(), # identity
+        std: float = 0.0
     ):
         """Initialization with xavier
 
@@ -95,10 +97,11 @@ class SepActorCritic(nn.Module):
                    "If you use Categorical, output activation must be softmax"
         
         self.dist = dist
+        self.std = std
 
         self.critic = MLP(
             input_size=input_size,
-            hidden_sizes=hidden_sizes,
+            hidden_sizes=actor_hidden_sizes,
             output_size=critic_output_size,
             hidden_activation=hidden_activation,
             output_activation=critic_output_activation
@@ -106,7 +109,7 @@ class SepActorCritic(nn.Module):
         
         self.actor = MLP(
             input_size=input_size,
-            hidden_sizes=hidden_sizes,
+            hidden_sizes=critic_hidden_sizes,
             output_size=actor_output_size,
             hidden_activation=hidden_activation,
             output_activation=actor_output_activation
@@ -141,6 +144,7 @@ class SharedActorCritic(MLP):
         hidden_activation: Callable = nn.ReLU(),
         actor_output_activation: Callable = nn.Sequential(), # identity
         critic_output_activation: Callable = nn.Sequential(), # identity
+        std: float = 0.0,
     ):
         super().__init__(
             input_size=input_size,
@@ -153,6 +157,8 @@ class SharedActorCritic(MLP):
                    "If you use Categorical, output activation must be softmax"
 
         self.dist = dist
+        self.std = std
+        
         self.actor = nn.Sequential()
         self.critic = nn.Sequential()
 

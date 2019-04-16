@@ -10,7 +10,7 @@ def get_config_and_module():
 
         save and load:
             여기서 말하는 파라미터는 모델 파라미터와 하이퍼파라미터를 의미.
-            파라미터 저장은 Ctrl+c (KeyboardInterrup)에 의해서만 이루어짐.
+            파라미터 저장은 학습이 끝나거나 중간에 Ctrl+C로 종료되었을 때 이루어짐
             파라미터 복원은 마지막으로 실행했던 학습의 파라미터를 불러옴.
             
             그 외의 파라미터 복원을 위해서는 wandb에 저장했던 결과물을 복원
@@ -66,12 +66,6 @@ def get_config_and_module():
     config.video_dir = v_dir
     config.params_path = p_path
     config.hyperparams_path = hp_path
-
-    print("Parsing parameters")
-    print("=" * 70)
-    for key, value in vars(config).items():
-        print(key, "=",value)
-    print("=" * 70)
 
     return config, module
 

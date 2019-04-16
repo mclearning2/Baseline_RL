@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions import Normal
+from torch.distributions import Categorical
 
 from common.envs.core import GymEnv
 from common.abstract.base_project import BaseProject
@@ -10,31 +10,32 @@ from algorithms.PPO import PPO
 
 class Project(BaseProject):
     def init_hyper_params(self):
+        import numpy as np
+
         return {
-            "gamma": 0.9204,
-            "tau": 0.9094,
-            "epsilon": 0.389,
+            "gamma": 0.99,
+            "tau": 0.95,
+            "epsilon": np.random.uniform(0.2, 0.4),
             "entropy_ratio": 0.001,
-            "rollout_len": 14,
-            "batch_size": 92,
-            "epoch": 17,
-            "n_workers": 8,
+            "rollout_len": np.random.randint(4, 30),
+            "batch_size": np.random.randint(4, 128),
+            "epoch": np.random.randint(4, 128),
+            "n_workers": np.random.randint(4, 12),
             "max_episode_steps": 0,
-            "actor_lr": 0.001238,
-            "critic_lr": 0.00215,
-            "actor_hidden_sizes": [41],
-            "critic_hidden_sizes": [61, 61],
+            "actor_lr": np.random.uniform(0.0001, 0.01),
+            "critic_lr": np.random.uniform(0.0001, 0.01),
+            "actor_hidden_sizes": np.random.randint(4) * [np.random.randint(4, 128)],
+            "critic_hidden_sizes": np.random.randint(4) * [np.random.randint(4, 128)],
         }
     
     def init_env(self, hyper_params, render_on, monitor_func):
         return GymEnv(
-            env_id='Pendulum-v0', 
+            env_id='LunarLander-v2', 
             n_envs=hyper_params['n_workers'],
             render_on=render_on,
-            max_episode=500,
+            max_episode= 300,
             max_episode_steps=hyper_params['max_episode_steps'],
             monitor_func=monitor_func(lambda x: x % 50 == 0),
-            action_scale=True
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):
@@ -45,8 +46,8 @@ class Project(BaseProject):
             critic_output_size=1,
             actor_hidden_sizes=hyper_params['actor_hidden_sizes'],
             critic_hidden_sizes=hyper_params['critic_hidden_sizes'],
-            actor_output_activation=nn.Tanh(),
-            dist=Normal,
+            actor_output_activation=nn.Softmax(),
+            dist=Categorical,
         ).to(device)
 
         optimizer = optim.Adam(model.parameters(), hyper_params['actor_lr'])

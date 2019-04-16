@@ -6,44 +6,67 @@ from common.abstract.base_agent import BaseAgent
 
 from algorithms.utils.update import soft_update
 from algorithms.utils.buffer import ReplayMemory
-from algorithms.utils.noise import OUNoise, GaussianNoise
+from algorithms.utils.noise import GaussianNoise
 
 class TD3(BaseAgent):
+    ''' Deep Deterministic Policy Gradient
+    
+    - The only continuous environment is available
+    - The input of critic is the output of actor. So critic can't be CNN
+    - The action noise is used Gaussian distribution
+    - Train model [actor, critic1, critic2],
+      Target model [target_actor, target_critic1, target_critic2]
+      Otimizer [actor_optim, critic_optim1, critic_optim2]
+    - hyper_params in this agent
+        gamma(float): discount_factor
+        tau(float): The ratio of target model for soft update
+        max_sigma(float): The start of standard deviation of gaussian noise
+        min_sigma(float): The end of standard deviation of gaussian noise
+        noise_decay_period(int): The number of steps to decay sigma of noise
+        noise_std(float): The standard deviation of the target action noise (mean is 0)
+        noise_clip(float): The clip of noise of target action (-noise_clip, +noise_clip)
+        policy_update_period(int): When critic updaten this times, actor updates once
+        batch_size(int): The sample size of experience replay memory
+        memory_size(int): The size of experience replay memory
+    '''
     def __init__(
         self,
         env,
-        models: Dict[str, Union[torch.nn.Module, torch.optim.Optimizer]],
+        actor, critic1, critic2,
+        target_actor, target_critic1, target_critic2,
+        actor_optim, critic_optim1, critic_optim2,
         device: str,
         hyper_params: dict
     ):
         self.env = env
         self.device = device
         
-        self.actor = models['actor']
-        self.critic1 = models['critic1']
-        self.critic2 = models['critic2']
+        self.actor = actor
+        self.critic1 = critic1
+        self.critic2 = critic2
 
-        self.target_actor = models['target_actor']
-        self.target_critic1 = models['target_critic1']
-        self.target_critic2 = models['target_critic2']
+        self.target_actor = target_actor
+        self.target_critic1 = target_critic1
+        self.target_critic2 = target_critic2
 
-        self.actor_optim = models['actor_optim']
-        self.critic_optim1 = models['critic_optim1']
-        self.critic_optim2 = models['critic_optim2']
+        self.actor_optim = actor_optim
+        self.critic_optim1 = critic_optim1
+        self.critic_optim2 = critic_optim2
 
         self.hp = hyper_params
 
         self.memory = ReplayMemory(self.hp['memory_size'])
 
-        noise_type = self.hp['noise_type']
+        max_sigma = self.hp['max_sigma']
+        min_sigma = self.hp['min_sigma']
         decay_period = self.hp['noise_decay_period']
-
-        if noise_type == 'ou':
-            self.noise = OUNoise(self.env.action_size, decay_period=decay_period)
-        elif noise_type == 'gaussian':
-            self.noise = GaussianNoise(self.env.action_size, decay_period=decay_period)
-        else:
-            raise TypeError(f"noise type must be 'ou' or 'gaussian', but {noise_type}")
+    
+        self.noise = GaussianNoise(
+            self.env.action_size, 
+            max_sigma=max_sigma,
+            min_sigma=min_sigma,
+            decay_period=decay_period
+        )
 
     def select_action(self, state: np.ndarray) -> np.ndarray:
         state = torch.FloatTensor(state).to(self.device)
@@ -63,10 +86,10 @@ class TD3(BaseAgent):
         states, actions, rewards, next_states, dones = self.memory.sample(batch_size)
 
         states = torch.FloatTensor(states).to(self.device)
-        actions = torch.FloatTensor(actions).unsqueeze(1).to(self.device)
-        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
+        actions = torch.FloatTensor(actions).to(self.device)
+        rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(next_states).to(self.device)
-        dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
+        dones = torch.FloatTensor(dones).to(self.device)
 
         # Critic Loss
         next_action = self.target_actor(next_states)
@@ -109,16 +132,15 @@ class TD3(BaseAgent):
     def train(self):
         total_step = 0
         state = self.env.reset()
-        self.noise.reset()
         
-        while self.env.episodes[0] < self.env.max_episode:
+        while self.env.episodes[0] < self.env.max_episode + 1:
             total_step += 1
             
             action = self.select_action(state)
-            action = self.noise.add(action, total_step)
+            action += self.noise.sample(total_step)            
 
-            next_state, reward, done, info = self.env.step(action, scale=True)
-
+            next_state, reward, done, info = self.env.step(action)
+            
             self.memory.save(state[0], action[0], reward, next_state[0], done)
 
             state = next_state
@@ -127,8 +149,6 @@ class TD3(BaseAgent):
                 self.train_model(self.env.steps[0])
 
             if done[0]:
-                self.noise.reset()
-
                 self.write_log(
                     episode=self.env.episodes[0],
                     score=self.env.scores[0],

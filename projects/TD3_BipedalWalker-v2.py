@@ -14,29 +14,30 @@ class Project(BaseProject):
     def init_hyper_params(self):
         return {
             "gamma": 0.99,
-            "tau": 0.99,
-            "min_sigma": 1.0,
-            "max_sigma": 1.0,
-            "noise_decay_period": 100000,
+            "tau": 0.995,
+            "min_sigma": 0.1,
+            "max_sigma": 0.1,
+            "noise_decay_period": 0,
             "noise_std": 0.2,
-            "noise_clip": 0.5,
+            "noise_clip": 0.5,            
             "policy_update_period": 2,
-            "batch_size": np.random.randint(4, 128),
-            "memory_size": 1000000,
-            "max_episode_steps": 0,
-            "actor_lr": np.random.uniform(0.01, 0.0001),
-            "critic_lr": np.random.uniform(0.01, 0.0001),
-            "actor_hidden_sizes": np.random.randint(4) * [np.random.randint(16, 128)],
-            "critic_hidden_sizes": np.random.randint(4) * [np.random.randint(16, 128)],
+            "batch_size": 100,
+            "memory_size": 1000000,            
+            "max_episode_steps": 2000,
+            "actor_lr": 0.001,
+            "critic_lr": 0.001,
+            "actor_hidden_sizes": [400, 300],
+            "critic_hidden_sizes": [400, 300]
         }
 
     def init_env(self, hyper_params, render_on, monitor_func):
         return GymEnv(
-            env_id = 'Pendulum-v0', 
+            env_id = 'BipedalWalker-v2', 
             n_envs = 1,
             render_on = render_on,
-            max_episode = 500,
+            max_episode = 1000,
             max_episode_steps = hyper_params['max_episode_steps'],
+            max_step_not_done = False,
             monitor_func = monitor_func(lambda x: x % 50 == 0),
         )
 

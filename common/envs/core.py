@@ -15,8 +15,12 @@ class GymEnv:
         render_on: bool = False,
         max_episode: int = 1000,
         max_episode_steps: int = 0,
+        max_step_not_done: bool = True,
+        last_step_reward: int = 0,
         monitor_func: Callable = None,
-        recent_score_len: int = 100
+        recent_score_len: int = 100,
+        action_scale: bool = True,
+        action_clip: bool = True,
     ):
         # 정보를 얻기 위한 환경
         env = gym.make(env_id)
@@ -26,10 +30,14 @@ class GymEnv:
         self.render_on = render_on
         self.max_episode = max_episode
         self.max_episode_steps = max_episode_steps
+        self.max_step_not_done = max_step_not_done
+        self.last_step_reward = last_step_reward
+        self.action_scale = action_scale
+        self.action_clip = action_clip
         
         self.prev_done = np.zeros(n_envs)
-        self.steps = np.zeros(n_envs)
-        self.episodes = np.zeros(n_envs)
+        self.steps = np.zeros(n_envs, dtype=int)
+        self.episodes = np.zeros(n_envs, dtype=int)
         self.scores = np.zeros(n_envs)
         self.recent_scores: deque = deque(maxlen=recent_score_len)
 
@@ -42,7 +50,8 @@ class GymEnv:
         if isinstance(env.action_space, gym.spaces.Discrete):
             self.action_size = env.action_space.n
             self.is_discrete = True
-            self.low = self.high = None
+            self.low = None
+            self.high = None
         else:
             self.action_size = env.action_space.shape[0]
             self.is_discrete = False
@@ -77,16 +86,31 @@ class GymEnv:
         self.steps += 1
 
         if not self.is_discrete:
-            action = np.clip(action, self.low, self.high)
+            if self.action_scale:
+                scale = (self.high - self.low) / 2
+                reloc = self.high - scale
+                action = action * scale + reloc
 
-        next_state, reward, done, info = self.envs.step(action)
+            if self.action_clip:
+                action = np.clip(action, self.low, self.high)
+        try:
+            next_state, reward, done, info = self.envs.step(action)
+        except EOFError:
+            if self.is_discrete:
+                raise TypeError("You must use Categorical distribution.") 
+            else:
+                raise TypeError("You must use Normal distribution.") 
+
+        self.prev_done = done
+        
+        reward[np.where(self.steps == self.max_episode_steps)] += self.last_step_reward
+
+        if self.max_step_not_done:
+            done[np.where(self.steps == self.max_episode_steps)] = False
         
         self.scores += reward
-        self.prev_done = done
-
         if done[0]:
             self.recent_scores.append(self.scores[0])
-        done[np.where(self.step == self.max_episode_steps)] = False
 
         return next_state, reward, done, info
 
@@ -108,7 +132,7 @@ class GymEnv:
                 env._max_episode_steps = self.max_episode_steps
             else:
                 self.max_episode_steps = env._max_episode_steps
-
+            
             if monitor_func:
                 env = monitor_func(env)
 

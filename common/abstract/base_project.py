@@ -5,7 +5,7 @@ import torch
 import pickle
 import numpy as np
 from glob import glob
-from typing import Tuple, Union, Callable
+from typing import Tuple, Union, Callable, Dict
 from gym.wrappers import Monitor
 from abc import ABC, abstractmethod
 
@@ -24,6 +24,8 @@ class BaseProject(ABC):
     
     '''
     def __init__(self, config):
+        
+        self.config = config
 
         self.user_name = config.user_name
         self.project = config.project
@@ -84,9 +86,10 @@ class BaseProject(ABC):
         self, 
         input_size: int,
         output_size: int,
+        device: str,
         hyper_params: dict
-        ) -> Tuple[torch.nn.Module, torch.optim.Optimizer]:
-        ''' Implement and return [model, optim].
+    ) -> Dict[str, Union[torch.nn.Module, torch.optim.Optimizer]]:
+        ''' Implement and return model.
 
         Args:
             input_size: The input size of model
@@ -95,17 +98,16 @@ class BaseProject(ABC):
         
         Examples:
             model = MLP(...)
-            optimr = optim(...)
+            optimizer = optim.Adam(...)
 
-            return model, optim
+            return {'model', model, 'optim', optimizer}
         '''
 
     @abstractmethod
     def init_agent(
         self, 
         env: GymEnv, 
-        model: torch.nn.Module, 
-        optim: torch.optim.Optimizer, 
+        model: dict, 
         device: str, 
         hyper_params: dict
     ):
@@ -174,38 +176,30 @@ class BaseProject(ABC):
             return self.init_hyper_params()
 
     def _init_model(self, env, hyper_params):
-        model, optim = self.init_model(
+        model = self.init_model(
                     input_size=env.state_size, 
                     output_size=env.action_size,
+                    device=self.device,
                     hyper_params=hyper_params
                 )
-        # Make sure the distribution is suitable for the environment.
-        # discret : Categorical distribution
-        # continuous : Normal distribution
-        if env.is_discrete:
-            # Check if distribution is categorical
-            assert model.dist == Categorical, \
-                   "Model distribution must be Categorical, but " + str(model.dist)
-        else:
-            assert model.dist == Normal, \
-                   "Model distribution must be Normal, but " + str(model.dist)
-        
-        if self.restore:
-            params = torch.load(self.params_path)
-            
-            model.load_state_dict(params['model'])
-            optim.load_state_dict(params['optim'])
 
+        if self.restore:
+            for name, tensor in model.items():    
+                params = torch.load(self.params_path)
+                model[name].load_state_dict(params[name])
+                
             print("[INFO] Loaded model and optimizer from " + self.params_path)
         else:
-            print("[INFO] Initialized model ")
+            print("[INFO] Initialized model and optimizer")
         
-        return model, optim
+        return model
 
-    def _save_model(self, model, optim):
+    def _save_model(self, model):
         check_path_or_make_dir(self.params_path)
-        
-        params = {'model': model.state_dict(), 'optim': optim.state_dict()}
+
+        params = dict()
+        for name, tensor in model.items():
+            params[name] = model[name].state_dict()
 
         torch.save(params, self.params_path)
 
@@ -241,12 +235,13 @@ class BaseProject(ABC):
         print(f"[INFO] Seeds are set by {self.seed}")
 
         # == Model == #
-        model, optim = self._init_model(env, hyper_params)
+        model = self._init_model(env, hyper_params)
 
         # == Agent == #
-        agent = self.init_agent(env, model, optim, self.device, hyper_params)
+        agent = self.init_agent(env, model, self.device, hyper_params)
         print("[INFO] Initialized agent")
 
+        
         # == Train or Test == *
         if self.test_mode:
             print("[INFO] Starting test...")
@@ -254,8 +249,29 @@ class BaseProject(ABC):
         else:
             print("[INFO] Starting train...")
 
-            wandb.init(project=self.project, config=hyper_params, dir='report')
-            wandb.watch(model, log="parameters")
+            wandb.init(
+                project=self.project, 
+                config=hyper_params, 
+                tensorboard=True,
+                dir='report'
+            )
+
+            print("Model parameters")
+            print("=" * 70)
+            print(model)
+            print("=" * 70, end="\n\n")
+
+            print("Parsing parameters")
+            print("=" * 70)
+            for key, value in vars(self.config).items():
+                print(key, "=",value)
+            print("=" * 70, end="\n\n")
+
+            print("Hyperparameters")
+            print("=" * 70)
+            for key, value in hyper_params.items():
+                print(key, "=",value)
+            print("=" * 70, end="\n\n")
 
             try:
                 agent.train()
@@ -263,7 +279,7 @@ class BaseProject(ABC):
                 pass
 
             # Save 
-            self._save_model(model, optim)
+            self._save_model(model)
             self._save_hyper_params(hyper_params)
             self._save_wandb()
         

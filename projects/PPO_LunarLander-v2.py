@@ -15,17 +15,17 @@ class Project(BaseProject):
         return {
             "gamma": 0.99,
             "tau": 0.95,
-            "epsilon": np.random.uniform(0.2, 0.4),
+            "epsilon": 0.3844,
             "entropy_ratio": 0.001,
-            "rollout_len": np.random.randint(4, 30),
-            "batch_size": np.random.randint(4, 128),
-            "epoch": np.random.randint(4, 128),
-            "n_workers": np.random.randint(4, 12),
+            "rollout_len": 18,
+            "batch_size": 55,
+            "epoch": 7,
+            "n_workers": 10,
             "max_episode_steps": 0,
-            "actor_lr": np.random.uniform(0.0001, 0.01),
-            "critic_lr": np.random.uniform(0.0001, 0.01),
-            "actor_hidden_sizes": np.random.randint(4) * [np.random.randint(4, 128)],
-            "critic_hidden_sizes": np.random.randint(4) * [np.random.randint(4, 128)],
+            "actor_lr": 0.001751,
+            "critic_lr": 0.0001991,
+            "actor_hidden_sizes": [102,102],
+            "critic_hidden_sizes": [],
         }
     
     def init_env(self, hyper_params, render_on, monitor_func):

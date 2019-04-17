@@ -1,4 +1,5 @@
-# Baseline reinforcement learning algorithms for OpenAI gym
+# Baseline RL algorithms for OpenAI gym
+
 
 OpenAI gym의 환경들을 이용해서 [Spinning up의 Key Papers in Deep RL](https://spinningup.openai.com/en/latest/spinningup/keypapers.html)에 나오는 논문들을 최대한 많이 구현해보는 것이 목표인 프로젝트입니다. 또한 최대한 한 알고리즘이 다양한 환경에 적용될 수 있도록 실험자를 위한 프레임워크를 구축하는 것 또한 목표입니다.
 

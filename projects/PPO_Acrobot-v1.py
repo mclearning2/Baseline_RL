@@ -35,7 +35,7 @@ class Project(BaseProject):
             render_on=render_on,
             max_episode= 300,
             max_episode_steps=hyper_params['max_episode_steps'],
-            monitor_func=monitor_func(lambda x: x % 10 == 0),
+            monitor_func=monitor_func(lambda x: x % 50 == 0),
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

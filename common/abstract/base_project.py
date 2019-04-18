@@ -146,10 +146,14 @@ class BaseProject(ABC):
             run_path = os.path.join(self.user_name, self.project, self.run_id)
 
             print(f"[INFO] Loaded from {run_path}")
-            for path in [self.params_path, self.hyperparams_path]:
+            video_paths = glob(os.path.join(self.video_dir, "*.mp4"))
+
+            for path in [self.params_path, self.hyperparams_path] + list(video_paths):
+                
                 root = os.path.dirname(path)
                 name = os.path.basename(path)
-
+                name = 'openaigym.video.*.mp4'
+                
                 downloaded = wandb.restore(
                     name=name,
                     run_path=run_path,

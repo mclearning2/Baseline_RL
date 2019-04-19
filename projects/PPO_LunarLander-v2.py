@@ -40,15 +40,19 @@ class Project(BaseProject):
 
     def init_model(self, input_size, output_size, device, hyper_params):
 
-        model = SepActorCritic(
+        actor = CategoricalDist(
             input_size=input_size,
-            actor_output_size=output_size,
-            critic_output_size=1,
-            actor_hidden_sizes=hyper_params['actor_hidden_sizes'],
-            critic_hidden_sizes=hyper_params['critic_hidden_sizes'],
-            actor_output_activation=nn.Softmax(),
-            dist=Categorical,
-        ).to(device)
+            hidden_sizes=hyper_params['actor_hidden_sizes'],
+            output_size=output_size
+        )
+
+        critic = MLP(
+            input_size=input_size,
+            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            output_size=1
+        )
+
+        model = SepActorCritic(actor, critic).to(device)
 
         optimizer = optim.Adam(model.parameters(), hyper_params['actor_lr'])
 

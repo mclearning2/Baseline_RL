@@ -58,93 +58,52 @@ class MLP(nn.Module):
 
         return self.fcs(x)
 
-class SepActorCritic(nn.Module):
-    ''' Actor Critic model with seperate networks. '''
+class SepMLP(nn.Module):
     def __init__(
         self,
         input_size: int,
-        actor_hidden_sizes: list,
-        critic_hidden_sizes: list,
-        actor_output_size: int,
-        critic_output_size: int,
-        dist: Union[Normal, Categorical],
+        hidden_sizes1: list,
+        hidden_sizes2: list,
+        output_size1: int,
+        output_size2: int,
         hidden_activation: Callable = nn.ReLU(),
-        actor_output_activation: Callable = nn.Sequential(), # identity
-        critic_output_activation: Callable = nn.Sequential(), # identity
-        std: float = 0.0
+        output_activation1: Callable = nn.Sequential(), # identity
+        output_activation2: Callable = nn.Sequential(), # identity
     ):
-        """Initialization with xavier
-
-        Args:
-            input_size: The size of input layer
-            hidden_sizes: The sizes of hidden layers 
-                        (e.g) 1. [] : no hidden layers
-                              2. [128, 256] : first 128 layers 
-                                             second 256 layers
-            actor_output_size: The size of Actor output layer. 
-            critic_output_size: The size of Critic output layer.
-            dist: an ouptut distribution of Actor, Normal or Categorical
-            hidden_activation: The activation function of hidden layers
-            actor_output_activation: The activation function of output layer.
-                               This shape must be same with actor_output_size above
-            critic_output_activation: The activation function of output layer.
-                               This shape must be same with critic_output_size above
-            
-        """
-        super().__init__()
-        if dist == Categorical:
-            assert type(actor_output_activation) == type(nn.Softmax()), \
-                   "If you use Categorical, output activation must be softmax"
-        
-        self.dist = dist
-        self.std = std
-
-        self.critic = MLP(
+        self.mlp1 = MLP(
             input_size=input_size,
-            hidden_sizes=actor_hidden_sizes,
-            output_size=critic_output_size,
+            hidden_sizes=hidden_sizes1,
+            output_size=output_size1,
             hidden_activation=hidden_activation,
-            output_activation=critic_output_activation
+            output_activation=output_activation1
         )
         
-        self.actor = MLP(
+        self.mlp2 = MLP(
             input_size=input_size,
-            hidden_sizes=critic_hidden_sizes,
-            output_size=actor_output_size,
+            hidden_sizes=hidden_sizes2,
+            output_size=output_size2,
             hidden_activation=hidden_activation,
-            output_activation=actor_output_activation
+            output_activation=output_activation2
         )
+
         self.apply(init_linear_weights_xavier)
 
     def forward(self, x):
-        ac = self.actor(x)
-        value = self.critic(x)
+        output1 = self.mlp1(x)
+        output2 = self.mlp2(x)
 
-        if self.dist == Normal: 
-            std = (torch.ones_like(ac) * self.std).exp()
-            dist = Normal(ac, std)
-            
-            return dist, value
-        elif self.dist == Categorical:
-            dist = Categorical(ac)
-            
-            return dist, value
-        else: # ac = policy
-            return ac, value
+        return output1, output2
 
-class SharedActorCritic(MLP):
-    ''' Actor Critic model with a share network. '''
+class ShareMLP(nn.Module):
     def __init__(
         self,
         input_size: int,
         hidden_sizes: list,
-        actor_output_size: int,
-        critic_output_size: int,
-        dist: Union[Normal, Categorical],
+        output_size1: int,
+        output_size2: int,
         hidden_activation: Callable = nn.ReLU(),
-        actor_output_activation: Callable = nn.Sequential(), # identity
-        critic_output_activation: Callable = nn.Sequential(), # identity
-        std: float = 0.0,
+        output_activation1: Callable = nn.Sequential(), # identity
+        output_activation2: Callable = nn.Sequential(), # identity
     ):
         super().__init__(
             input_size=input_size,
@@ -152,40 +111,185 @@ class SharedActorCritic(MLP):
             output_size=0,
             hidden_activation=hidden_activation,            
         )
-        if dist == Categorical:
-            assert type(actor_output_activation) == type(nn.Softmax()), \
-                   "If you use Categorical, output activation must be softmax"
-
-        self.dist = dist
-        self.std = std
         
-        self.actor = nn.Sequential()
-        self.critic = nn.Sequential()
+        self.mlp1 = nn.Sequential()
+        self.mlp2 = nn.Sequential()
 
         last_size = hidden_sizes[-1] if hidden_sizes else input_size
 
-        self.actor.add_module("actor", nn.Linear(last_size, actor_output_size))
-        self.actor.add_module("actor_act", actor_output_activation)
+        self.mlp1.add_module("output1", nn.Linear(last_size, output_size1))
+        self.mlp1.add_module("output_act1", output_activation1)
 
-        self.critic.add_module("critic", nn.Linear(last_size, critic_output_size))
-        self.critic.add_module("critic_act", critic_output_activation)
-        
+        self.mlp2.add_module("output2", nn.Linear(last_size, output_size2))
+        self.mlp2.add_module("output_act2", output_activation2)
+
         self.apply(init_linear_weights_xavier)
 
     def forward(self, x):
-        hidden = self.fcs(x)
+        output1 = self.mlp1(x)
+        output2 = self.mlp2(x)
 
-        ac = self.actor(hidden)
-        value = self.critic(hidden)
+        return output1, output2
+
+class CategoricalDist(MLP):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_sizes: list,
+        output_size: int = 0,
+        hidden_activation: Callable = nn.ReLU(),
+        output_activation: Callable = nn.Softmax(),
+    ):
+        super().__init__(
+            input_size=input_size,
+            hidden_sizes=hidden_sizes,
+            output_size=output_size,
+            hidden_activation=hidden_activation,
+            output_activation=output_activation,
+        )
+
+        self.apply(init_linear_weights_xavier)
+
+    def forward(self, x):
+        probs = super().forward(x)
+        return Categorical(probs)
+
+class NormalDist(MLP):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_sizes: list,
+        output_size: int = 0,
+        hidden_activation: Callable = nn.ReLU(),
+        output_activation: Callable = nn.Softmax(),
+        std:float = 0.0,
+    ):
+        super().__init__(
+            input_size=input_size,
+            hidden_sizes=hidden_sizes,
+            output_size=output_size,
+            hidden_activation=hidden_activation,
+            output_activation=output_activation,
+        )
+        self.std = std
+
+        self.apply(init_linear_weights_xavier)
+
+    def forward(self, x):
+        mu = super().forward(x)
+        log_std = (torch.ones_like(mu) * self.std)
+        return Normal(mu, log_std.exp())
+    
+class SepNormalDist(SepMLP):
+    def __init__(
+        self,
+        input_size: int,
+        mu_hidden_sizes: list,
+        sigma_hidden_sizes: list,
+        mu_output_size: int,
+        sigma_output_size: int,
+        hidden_activation: Callable = nn.ReLU(),
+        mu_output_activation: Callable = nn.Sequential(), # identity
+        sigma_output_activation: Callable = nn.Sequential(), # identity
+    ):
+        super().__init__(
+            input_size=input_size,
+            hidden_sizes1=mu_hidden_sizes,
+            hidden_sizes2=sigma_hidden_sizes,
+            output_size1=mu_output_size,
+            output_size2=sigma_output_size,
+            hidden_activation=hidden_activation,
+            output_activation1=mu_output_activation,
+            output_activation2=sigma_output_activation
+        )
+
+    def forward(self, x):
+        mu, sigma = super().forward(x)
         
-        if self.dist == Normal: 
-            std = (torch.ones_like(ac) * self.std).exp()
-            dist = Normal(ac, std)
-            
-            return dist, value
+        return Normal(mu, sigma)
+
+class ShareNormalDist(ShareMLP):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_sizes: list,
+        mu_output_size: int,
+        sigma_output_size: int,
+        hidden_activation: Callable = nn.ReLU(),
+        mu_output_activation: Callable = nn.Sequential(), # identity
+        sigma_output_activation: Callable = nn.Sequential(), # identity
+    ):
+        super().__init__(
+            input_size=input_size,
+            hidden_sizes=hidden_sizes,
+            output_size1=mu_output_size,
+            output_size2=sigma_output_size,
+            hidden_activation=hidden_activation,
+            output_activation1=mu_output_activation,
+            output_activation2=sigma_output_activation
+        )
+
+    def forward(self, x):
+        mu, sigma = super().forward(x)
+        
+        return Normal(mu, sigma)
+
+class SepActorCritic(nn.Module):
+    def __init__(
+        self,
+        actor: Union[MLP, CategoricalDist, NormalDist, SepNormalDist, ShareNormalDist],
+        critic: MLP,
+    ):
+        super().__init__()
+        self.actor = actor
+        self.critic = critic
+
+        self.apply(init_linear_weights_xavier)
+
+    def forward(self, x):
+        dist = self.actor.forward(x)
+        value = self.critic.forward(x)
+
+        return dist, value
+
+class ShareActorCritic(ShareMLP):
+    def __init__(
+        self,
+        input_size:int,
+        hidden_sizes: list,
+        actor_output_size: int,
+        critic_output_size: int,
+        dist: Union[Normal, Categorical],
+        std: float = 0.0,
+        hidden_activation: Callable = nn.ReLU(),
+        actor_output_activation: Callable = nn.Sequential(), # identity
+        critic_output_activation: Callable = nn.Sequential(), # identity
+    ):
+        super().__init__(
+            self,
+            input_size=input_size,
+            hidden_sizes=hidden_sizes,
+            output_size1=actor_output_size,
+            output_size2=critic_output_size,
+            hidden_activation=hidden_activation,
+            output_activation1=actor_output_activation,
+            output_activation2=critic_output_activation
+        )
+        self.dist = dist
+        self.std = std
+
+        self.apply(init_linear_weights_xavier)
+
+    def forward(self, x):
+
+        actor, critic = super().forward(x)
+
+        if self.dist == Normal:
+            log_std = (torch.ones_like(ac) * self.std)
+
+            return self.dist(actor, log_std.exp()), critic
         elif self.dist == Categorical:
-            dist = Categorical(ac)
-            
-            return dist, value
-        else: # ac = policy
-            return ac, value
+            return self.dist(actor), critic
+        
+        else:
+            raise TypeError("Normal or Categorical")

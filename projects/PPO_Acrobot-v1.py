@@ -1,11 +1,9 @@
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions import Categorical
 
 from common.envs.core import GymEnv
 from common.abstract.base_project import BaseProject
-
-from common.models.mlp import SepActorCritic
+from common.models.mlp import CategoricalDist, MLP, SepActorCritic
 from algorithms.PPO import PPO
 
 class Project(BaseProject):
@@ -15,17 +13,17 @@ class Project(BaseProject):
         return {
             "gamma": 0.99,
             "tau": 0.95,
-            "epsilon": np.random.uniform(0.2, 0.4),
+            "epsilon": 0.3881,
             "entropy_ratio": 0.001,
-            "rollout_len": np.random.randint(4, 30),
-            "batch_size": np.random.randint(4, 128),
-            "epoch": np.random.randint(4, 128),
-            "n_workers": np.random.randint(4, 12),
+            "rollout_len": 5,
+            "batch_size": 5,
+            "epoch": 8,
+            "n_workers": 5,
             "max_episode_steps": 0,
-            "actor_lr": np.random.uniform(0.0001, 0.01),
-            "critic_lr": np.random.uniform(0.0001, 0.01),
-            "actor_hidden_sizes": np.random.randint(4) * [np.random.randint(4, 128)],
-            "critic_hidden_sizes": np.random.randint(4) * [np.random.randint(4, 128)],
+            "actor_lr": 0.007007,
+            "critic_lr": 0.003648,
+            "actor_hidden_sizes": [],
+            "critic_hidden_sizes": [70],
         }
     
     def init_env(self, hyper_params, render_on, monitor_func):
@@ -40,15 +38,19 @@ class Project(BaseProject):
 
     def init_model(self, input_size, output_size, device, hyper_params):
 
-        model = SepActorCritic(
+        actor = CategoricalDist(
             input_size=input_size,
-            actor_output_size=output_size,
-            critic_output_size=1,
-            actor_hidden_sizes=hyper_params['actor_hidden_sizes'],
-            critic_hidden_sizes=hyper_params['critic_hidden_sizes'],
-            actor_output_activation=nn.Softmax(),
-            dist=Categorical,
-        ).to(device)
+            hidden_sizes=hyper_params['actor_hidden_sizes'],
+            output_size=output_size
+        )
+
+        critic = MLP(
+            input_size=input_size,
+            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            output_size=1
+        )
+
+        model = SepActorCritic(actor, critic).to(device)
 
         optimizer = optim.Adam(model.parameters(), hyper_params['actor_lr'])
 

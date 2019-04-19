@@ -1,16 +1,13 @@
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions import Categorical
 
 from common.envs.core import GymEnv
 from common.abstract.base_project import BaseProject
-
-from common.models.mlp import SepActorCritic
+from common.models.mlp import CategoricalDist, MLP, SepActorCritic
 from algorithms.PPO import PPO
 
 class Project(BaseProject):
     def init_hyper_params(self):
-        import numpy as np
 
         return {
             "gamma": 0.99,

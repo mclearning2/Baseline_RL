@@ -5,6 +5,8 @@ OpenAI gym의 환경들을 이용해서 [Spinning up의 Key Papers in Deep RL](h
 
 이 프로젝트는 TensorboardX 대신 [wandb(Weights & Biases)](https://www.wandb.com/)를 사용합니다. 
 
+또한 OpenAI의 multiprocessing_env를 활용하여 학습하고 여러 개 렌더링을 동시에 할 수 있습니다.(`n_worker` 파라미터 활용)
+
 | BipedalWalker-v2 | CartPole-v0 | Pendulum-v0 |
 | ---------------- | ----------- | ----------- |
 | ![BipedalWalker-v2](https://github.com/mclearning2/Baseline_RL/blob/master/images/BipedalWalker-v2.gif) | ![CartPole-v0](https://github.com/mclearning2/Baseline_RL/blob/master/images/CartPole-v0.gif) | ![Pendulum-v0](https://github.com/mclearning2/Baseline_RL/blob/master/images/Pendulum-v0.gif) |

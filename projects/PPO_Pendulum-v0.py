@@ -4,8 +4,7 @@ from torch.distributions import Normal
 
 from common.envs.core import GymEnv
 from common.abstract.base_project import BaseProject
-
-from common.models.mlp import SepActorCritic
+from common.models.mlp import NormalDist, MLP, SepActorCritic
 from algorithms.PPO import PPO
 
 class Project(BaseProject):
@@ -34,7 +33,6 @@ class Project(BaseProject):
             max_episode=500,
             max_episode_steps=hyper_params['max_episode_steps'],
             monitor_func=monitor_func(lambda x: x % 50 == 0),
-            action_scale=True
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

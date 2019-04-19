@@ -1,4 +1,5 @@
 import gym
+import roboschool
 import numpy as np
 import multiprocessing
 from copy import deepcopy

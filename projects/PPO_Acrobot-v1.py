@@ -8,7 +8,6 @@ from algorithms.PPO import PPO
 
 class Project(BaseProject):
     def init_hyper_params(self):
-        import numpy as np
 
         return {
             "gamma": 0.99,

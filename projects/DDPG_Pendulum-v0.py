@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions import Normal
 
 from algorithms.utils.update import hard_update
 from common.envs.core import GymEnv
@@ -10,7 +9,7 @@ from algorithms.DDPG import DDPG
 
 class Project(BaseProject):
     def init_hyper_params(self):
-        import numpy as np
+        
         return {
             "gamma": 0.99,
             "tau": 0.95,

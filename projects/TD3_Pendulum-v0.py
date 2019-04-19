@@ -17,17 +17,17 @@ class Project(BaseProject):
             "tau": 0.99,
             "min_sigma": 1.0,
             "max_sigma": 0.2,
-            "noise_decay_period": np.random.randint(10000, 1000000),
-            "noise_std": np.random.uniform(0.1, 0.5),
-            "noise_clip": np.random.uniform(0.1, 0.5),
-            "policy_update_period": np.random.randint(1, 5),
-            "batch_size": np.random.randint(4, 128),
-            "memory_size": np.random.randint(10000, 1000000),
+            "noise_decay_period": 992171,
+            "noise_std": 0.4803,
+            "noise_clip": 0.4499,
+            "policy_update_period": 3,
+            "batch_size": 17,
+            "memory_size": 624399,
             "max_episode_steps": 0,
-            "actor_lr": np.random.uniform(0.01, 0.0001),
-            "critic_lr": np.random.uniform(0.01, 0.0001),
-            "actor_hidden_sizes": np.random.randint(4) * [np.random.randint(16, 128)],
-            "critic_hidden_sizes": np.random.randint(4) * [np.random.randint(16, 128)],
+            "actor_lr": 0.002759,
+            "critic_lr": 0.002508,
+            "actor_hidden_sizes": [63, 63],
+            "critic_hidden_sizes": [110, 110]
         }
 
     def init_env(self, hyper_params, render_on, monitor_func):

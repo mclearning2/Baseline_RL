@@ -22,6 +22,8 @@ class GymEnv:
         recent_score_len: int = 100,
         action_scale: bool = True,
         action_clip: bool = True,
+        reward_clip: bool = False,
+        prepreocess_func: callable = None
     ):
         # 정보를 얻기 위한 환경
         env = gym.make(env_id)
@@ -30,11 +32,12 @@ class GymEnv:
         self.n_envs = n_envs
         self.render_on = render_on
         self.max_episode = max_episode
-        self.max_episode_steps = max_episode_steps
+        self.max_episode_steps = max_episode_steps if not None else 0
         self.max_step_not_done = max_step_not_done
         self.last_step_reward = last_step_reward
         self.action_scale = action_scale
         self.action_clip = action_clip
+        self.reward_clip = reward_clip
         
         self.prev_done = np.zeros(n_envs)
         self.steps = np.zeros(n_envs, dtype=int)
@@ -94,13 +97,11 @@ class GymEnv:
 
             if self.action_clip:
                 action = np.clip(action, self.low, self.high)
-        try:
-            next_state, reward, done, info = self.envs.step(action)
-        except EOFError:
-            if self.is_discrete:
-                raise TypeError("You must use Categorical distribution.") 
-            else:
-                raise TypeError("You must use Normal distribution.") 
+        
+        next_state, reward, done, info = self.envs.step(action)
+
+        if self.reward_clip:
+            reward = np.clip(reward, -1, 1)
 
         self.prev_done = done
         
@@ -124,6 +125,9 @@ class GymEnv:
 
     def seed(self, seed):
         self.envs.seed(seed)
+
+    def random_action(self):
+        return self.envs.random_action()
         
     def gen_env(self, monitor_func=None):
         def _thunk():

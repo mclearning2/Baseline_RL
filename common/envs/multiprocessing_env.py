@@ -30,6 +30,9 @@ def worker(remote, parent_remote, env_fn_wrapper):
         elif cmd == 'close':
             remote.close()
             break
+        elif cmd == 'random_action':
+            random_action = env.action_space.sample()
+            remote.send(random_action)
         elif cmd == 'get_spaces':
             remote.send((env.observation_space, env.action_space))
         else:
@@ -176,6 +179,11 @@ class SubprocVecEnv(VecEnv):
     def reset_task(self):
         for remote in self.remotes:
             remote.send(('reset_task', None))
+        return np.stack([remote.recv() for remote in self.remotes])
+
+    def random_action(self):
+        for remote in self.remotes:
+            remote.send(('random_action', None))
         return np.stack([remote.recv() for remote in self.remotes])
 
     def close(self):

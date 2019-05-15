@@ -15,6 +15,8 @@ class Gym:
         max_episode_steps: int = None,
         recent_score_len: int = 100,
         monitor_func: Callable = lambda x: x,
+        clip_action: bool = True,
+        scale_action: bool = False,
     ):
     
         self.env = MultipleEnv(env_id, n_envs, max_episode_steps, monitor_func)
@@ -28,6 +30,8 @@ class Gym:
         self.action_size = self.env.action_size
         self.is_discrete = self.env.is_discrete
         self.low, self.high = self.env.low, self.env.high
+        self.clip_action = clip_action
+        self.scale_action = scale_action
         
         self.render_available = False
         
@@ -51,7 +55,14 @@ class Gym:
         self.episodes[np.where(self.done)] += 1
 
         if not self.is_discrete:
-            action = np.clip(action, self.low, self.high)
+            if self.scale_action:
+                scale_factor = (self.high - self.low) / 2
+                reloc_factor = self.high - scale_factor
+
+                action = action * scale_factor + reloc_factor
+
+            if self.clip_action:
+                action = np.clip(action, self.low, self.high)
 
         next_state, reward, done, info = self.env.step(action)
 

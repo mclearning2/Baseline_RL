@@ -31,6 +31,8 @@ class Project(BaseProject):
             max_episode_steps = hyper_params['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
+            clip_action=True,
+            scale_action=True
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

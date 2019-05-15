@@ -17,4 +17,4 @@ if __name__ == '__main__':
     config, module = get_config_and_module()
 
     project = module.Project(config)
-    project.run()
+    project.run() 

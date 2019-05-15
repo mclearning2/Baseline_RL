@@ -3,8 +3,7 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from common.networks.initializer import init_linear_weights_xavier
-
+from common.models.utils import init_linear_weights_xavier
 
 class CNN(nn.Module):
     """ Convolutional Neural Network """
@@ -18,14 +17,15 @@ class CNN(nn.Module):
         hidden_activation: Callable = nn.ReLU(),
         output_activation: Callable = nn.Sequential(),
     ):
-        super(CNN, self).__init__()
+        super().__init__()
 
         self.cnn = nn.Sequential()
-        self.mlp = nn.Sequential()
+        self.fcs = nn.Sequential()
 
         # Conv Layers
-        for i, conv in enumerate(self.conv_layers):
-            self.cnn.add_module(f"cnn_{i}", conv)
+        for i, conv in enumerate(conv_layers):
+            self.cnn.add_module(f"cnn{i}", conv)
+            self.cnn.add_module(f"cnn_act{i}", hidden_activation)
 
         flatten_size = self.cnn(torch.zeros(1, *input_size)).view(-1).size(0)
 
@@ -44,9 +44,7 @@ class CNN(nn.Module):
         self.apply(init_linear_weights_xavier)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if len(x.size()) == 3:
-            x = x.unsqueeze(0)
         x = self.cnn(x)
         x = x.view(x.size(0), -1)
-        x = self.mlp(x)
+        x = self.fcs(x)
         return x

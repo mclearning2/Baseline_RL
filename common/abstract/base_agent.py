@@ -28,16 +28,14 @@ class BaseAgent(ABC):
 
     def test(self):
         state = self.env.reset()
-        while self.env.episodes[0] < self.env.max_episode:
+        while self.env.is_episode_done():
             action = self.select_action(state)
 
             next_state, reward, done, _ = self.env.step(action)
 
             state = next_state
 
-            for i, d in enumerate(done):
-                if d:
-                    print('score', self.env.scores[i])
+            print(reward)
 
     def write_log(self, **kargs):
         """ Write print and logging.

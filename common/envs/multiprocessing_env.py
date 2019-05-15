@@ -1,7 +1,6 @@
-# This code is from openai baseline
+# This code reference
 # https://github.com/openai/baselines/tree/master/baselines/common/vec_env
-# And add 'seed' function for training reproducing by mclearning2
-# And add 'get_max_episode_steps' function added for last state done check
+# But modified a little...
 
 import gym
 import numpy as np
@@ -85,8 +84,6 @@ class VecEnv(object):
     def step(self, actions):
         self.step_async(actions)
         return self.step_wait()
-
-
 class CloudpickleWrapper(object):
     """
     Uses cloudpickle to serialize contents (otherwise multiprocessing tries to use pickle)
@@ -102,23 +99,28 @@ class CloudpickleWrapper(object):
     def __setstate__(self, ob):
         import pickle
         self.x = pickle.loads(ob)
+class MultiEnv(VecEnv):
+    def __init__(self, 
+        env_id, 
+        n_envs,
+        max_episode_steps=None,
+        monitor_func=lambda x:x
+    ):
+        
+        self.env_id = env_id
+        self.n_envs = n_envs
+        self.max_episode_steps = max_episode_steps
 
+        env_fns = self._make_env_fns(monitor_func)
 
-class SubprocVecEnv(VecEnv):
-    def __init__(self, env_fns, max_episode_steps=0, spaces=None):
-        """
-        envs: list of gym environments to run in subprocesses
-        """
-        self.max_episode_steps=max_episode_steps
         self.waiting = False
-        self.closed = False
-        nenvs = len(env_fns)
-        self.nenvs = nenvs
-        self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(nenvs)])
+        self.closed = False        
+        self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(n_envs)])
+
         self.ps = [
             Process(
                 target=worker,
-                args=(
+                args=( 
                     work_remote,
                     remote,
                     CloudpickleWrapper(env_fn))) for (
@@ -128,6 +130,7 @@ class SubprocVecEnv(VecEnv):
                     self.work_remotes,
                     self.remotes,
                 env_fns)]
+        
         for p in self.ps:
             p.daemon = True  # if the main process crashes, we should not cause things to hang
             p.start()
@@ -136,15 +139,14 @@ class SubprocVecEnv(VecEnv):
 
         self.remotes[0].send(('get_spaces', None))
         observation_space, action_space = self.remotes[0].recv()
-        VecEnv.__init__(self, len(env_fns), observation_space, action_space)
-
-    def get_max_episode_steps(self):
-        return self.max_episode_steps
+        VecEnv.__init__(self, self.n_envs, observation_space, action_space)
+        
+        self._set_space(observation_space, action_space)
 
     def step_async(self, actions):
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
-        self.waiting = True
+        self.waiting = True 
 
     def step_wait(self):
         results = [remote.recv() for remote in self.remotes]
@@ -198,6 +200,46 @@ class SubprocVecEnv(VecEnv):
             p.join()
             self.closed = True
 
+    def _gen_env_func(self, monitor_func= lambda x: x):
+        def _thunk():
+            env = gym.make(self.env_id)
+
+            if self.max_episode_steps:
+                env._max_episode_steps = self.max_episode_steps
+            else:
+                self.max_episode_steps = env._max_episode_steps
+
+            if monitor_func:
+                env = monitor_func(env)
+
+            return env
+        return _thunk
+
+    def _make_env_fns(self, monitor_func):
+        envs = []
+        for i in range(self.n_envs):
+            if i == 0:
+                envs.append(self._gen_env_func(monitor_func=monitor_func))
+            else:
+                envs.append(self._gen_env_func())
+        return envs
+
+    def _set_space(self, observation_space, action_space):
+        state_size = observation_space.shape        
+        if len(state_size) == 1:
+            self.state_size = state_size[0]
+        else:
+            self.state_size = state_size
+        
+        self.is_discrete = isinstance(action_space, gym.spaces.Discrete)
+        if self.is_discrete:
+            self.low = self.high = None
+            self.action_size = action_space.n
+        else:
+            self.low = action_space.low
+            self.high = action_space.high   
+            self.action_size = action_space.shape[0]
+
     def __len__(self):
-        return self.nenvs
+        return self.n_envs
     

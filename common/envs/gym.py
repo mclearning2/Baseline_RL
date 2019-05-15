@@ -14,7 +14,7 @@ class Gym:
         max_episode: int = 50000,
         max_episode_steps: int = None,
         recent_score_len: int = 100,
-        monitor_func: Callable = lambda x: x,
+        monitor_func: Callable = None,
         clip_action: bool = True,
         scale_action: bool = False,
     ):
@@ -54,6 +54,8 @@ class Gym:
         self.scores[np.where(self.done)] = 0
         self.episodes[np.where(self.done)] += 1
 
+        self.steps += 1
+
         if not self.is_discrete:
             if self.scale_action:
                 scale_factor = (self.high - self.low) / 2
@@ -66,7 +68,8 @@ class Gym:
 
         next_state, reward, done, info = self.env.step(action)
 
-        self.steps += 1
+        done[np.where(self.steps == self.max_episode_steps)] = False
+
         self.scores += reward
         self.done = done
 

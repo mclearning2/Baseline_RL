@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Normal
 
-from common.envs.core import GymEnv
+from common.envs.gym import Gym
 from common.abstract.base_project import BaseProject
 from common.models.mlp import NormalDist, MLP, SepActorCritic
 from algorithms.PPO import PPO
@@ -22,18 +22,18 @@ class Project(BaseProject):
             "max_episode_steps": 0,
             "actor_lr": 0.005262,
             "critic_lr": 0.008651,
-            "actor_hidden_sizes": [29],
-            "critic_hidden_sizes": [],
+            "actor_hidden_sizes": [],
+            "critic_hidden_sizes": [29],
         }
-    
-    def init_env(self, hyper_params, render_on, monitor_func):
-        return GymEnv(
+
+    def init_env(self, hyper_params, monitor_func):
+        return Gym(
             env_id='BipedalWalker-v2', 
             n_envs=hyper_params['n_workers'],
-            render_on=render_on,
             max_episode= 300,
             max_episode_steps=hyper_params['max_episode_steps'],
             monitor_func=monitor_func(lambda x: x % 50 == 0),
+            scale_action=True,
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):
@@ -42,7 +42,7 @@ class Project(BaseProject):
             input_size=input_size,
             hidden_sizes=hyper_params['actor_hidden_sizes'],
             output_size=output_size,
-            output_activation=nn.Tanh()
+            output_activation=nn.Tanh(),
         )
 
         critic = MLP(

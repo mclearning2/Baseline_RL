@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.core import GymEnv
+from common.envs.gym import Gym
 from common.abstract.base_project import BaseProject
 from algorithms.utils.update import hard_update
 
@@ -30,15 +30,14 @@ class Project(BaseProject):
             "critic_hidden_sizes": [400, 300]
         }
 
-    def init_env(self, hyper_params, render_on, monitor_func):
-        return GymEnv(
+    def init_env(self, hyper_params, monitor_func):
+        return Gym(
             env_id = 'BipedalWalker-v2', 
             n_envs = 1,
-            render_on = render_on,
             max_episode = 1000,
             max_episode_steps = hyper_params['max_episode_steps'],
-            max_step_not_done = False,
             monitor_func = monitor_func(lambda x: x % 50 == 0),
+            scale_action = True,
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

@@ -104,7 +104,7 @@ class MultipleEnv(VecEnv):
         env_id, 
         n_envs,
         max_episode_steps=None,
-        monitor_func=lambda x:x
+        monitor_func=None,
     ):
         
         self.env_id = env_id
@@ -200,7 +200,7 @@ class MultipleEnv(VecEnv):
             p.join()
             self.closed = True
 
-    def _gen_env_func(self, monitor_func= lambda x: x):
+    def _gen_env_func(self, monitor_func=None):
         def _thunk():
             env = gym.make(self.env_id)
 

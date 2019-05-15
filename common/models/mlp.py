@@ -161,7 +161,7 @@ class NormalDist(MLP):
         hidden_sizes: list,
         output_size: int = 0,
         hidden_activation: Callable = nn.ReLU(),
-        output_activation: Callable = nn.Softmax(),
+        output_activation: Callable = nn.Tanh(),
         std:float = 0.0,
     ):
         super().__init__(
@@ -247,8 +247,8 @@ class SepActorCritic(nn.Module):
         self.apply(init_linear_weights_xavier)
 
     def forward(self, x):
-        dist = self.actor.forward(x)
-        value = self.critic.forward(x)
+        dist = self.actor(x)
+        value = self.critic(x)
 
         return dist, value
 

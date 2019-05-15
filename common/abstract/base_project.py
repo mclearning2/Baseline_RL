@@ -55,8 +55,8 @@ class BaseProject(ABC):
 
     @abstractmethod
     def init_env(self, 
-        monitor_func: Callable, 
-        hyper_params: dict
+        hyper_params: dict,
+        monitor_func: Callable,         
     ) -> Gym:
         ''' Implement and return environment class.
             Environment is used from one of {project_folder}/common/envs
@@ -110,8 +110,6 @@ class BaseProject(ABC):
         '''
 
     def monitor_func(self, video_callable=None, *args, **kargs):
-        ''' Return function that 
-        '''
         def _func(env):
             if self.record:
                 print("[INFO] Video(mp4) will be saved in " + self.video_dir)

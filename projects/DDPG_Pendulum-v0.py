@@ -15,7 +15,6 @@ class Project(BaseProject):
             "tau": 0.95,
             "batch_size": 32,
             "memory_size": 1000000,
-            
             "max_episode_steps": 0,
             "actor_lr": 0.00476,
             "critic_lr": 0.001858,
@@ -31,7 +30,6 @@ class Project(BaseProject):
             max_episode_steps = hyper_params['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
-            clip_action=True,
             scale_action=True
         )
 

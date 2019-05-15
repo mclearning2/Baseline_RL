@@ -28,7 +28,7 @@ class BaseAgent(ABC):
 
     def test(self):
         state = self.env.reset()
-        while self.env.is_episode_done():
+        while not self.env.is_episode_done():
             action = self.select_action(state)
 
             next_state, reward, done, _ = self.env.step(action)

@@ -89,7 +89,7 @@ class TD3(BaseAgent):
         actions = torch.FloatTensor(actions).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(next_states).to(self.device)
-        dones = torch.FloatTensor(dones).to(self.device)
+        dones = torch.FloatTensor(dones.astype(np.float)).to(self.device)
 
         # Critic Loss
         next_action = self.target_actor(next_states)
@@ -141,7 +141,7 @@ class TD3(BaseAgent):
 
             next_state, reward, done, info = self.env.step(action)
             
-            self.memory.save(state[0], action[0], reward, next_state[0], done)
+            self.memory.save(state, action, reward, next_state, done)
 
             state = next_state
 

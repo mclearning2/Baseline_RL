@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Normal
 
-from common.envs.core import GymEnv
+from common.envs.gym import Gym
 from common.abstract.base_project import BaseProject
 from common.models.mlp import NormalDist, MLP, SepActorCritic
 from algorithms.PPO import PPO
@@ -25,14 +25,14 @@ class Project(BaseProject):
             "critic_hidden_sizes": [61, 61],
         }
     
-    def init_env(self, hyper_params, render_on, monitor_func):
-        return GymEnv(
+    def init_env(self, hyper_params, monitor_func):
+        return Gym(
             env_id='Pendulum-v0', 
             n_envs=hyper_params['n_workers'],
-            render_on=render_on,
             max_episode=500,
             max_episode_steps=hyper_params['max_episode_steps'],
             monitor_func=monitor_func(lambda x: x % 50 == 0),
+            scale_action=True,
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from algorithms.utils.update import hard_update
-from common.envs.core import GymEnv
+from common.envs.gym import Gym
 from common.abstract.base_project import BaseProject
 from common.models.mlp import MLP
 from algorithms.DDPG import DDPG
@@ -23,14 +23,14 @@ class Project(BaseProject):
             "critic_hidden_sizes": [117],
         }
 
-    def init_env(self, hyper_params, render_on, monitor_func):
-        return GymEnv(
+    def init_env(self, hyper_params, monitor_func):
+        return Gym(
             env_id = 'Pendulum-v0', 
             n_envs = 1,
-            render_on = render_on,
             max_episode = 500,
             max_episode_steps = hyper_params['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0),
+            recent_score_len=20,
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

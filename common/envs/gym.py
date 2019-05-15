@@ -34,15 +34,11 @@ class Gym:
         
         self.render_available = False
         
-        self.prev_done = np.zeros(n_envs, dtype=bool)
+        self.done = np.zeros(n_envs, dtype=bool)
         self.steps = np.zeros(n_envs, dtype=int)
         self.episodes = np.zeros(n_envs, dtype=int)
         self.scores = np.zeros(n_envs)
         self.recent_scores: deque = deque(maxlen=recent_score_len)
-
-        if self.is_atari:
-            self.n_history, self.width, self.height = 4, 84, 84
-            self.state_size = (self.n_history, self.width, self.height)
 
     def reset(self):
         ''' reset은 처음에 한 번만 하고 그 이후 하지 않는다.
@@ -53,15 +49,15 @@ class Gym:
     def step(self, action: np.ndarray):
         self.render()
 
-        self.steps[np.where(self.prev_done)] = 0
-        self.scores[np.where(self.prev_done)] = 0
-        self.episodes[np.where(self.prev_done)] += 1
+        self.steps[np.where(self.done)] = 0
+        self.scores[np.where(self.done)] = 0
+        self.episodes[np.where(self.done)] += 1
 
         next_state, reward, done, info = self.env.step(action)
 
         self.steps += 1
         self.scores += reward
-        self.prev_done = done
+        self.done = done
 
         if done[0]:
             self.recent_scores.append(self.scores[0])
@@ -83,7 +79,3 @@ class Gym:
 
     def is_episode_done(self):
         return self.max_episode < self.episodes[0]
-
-    @property
-    def is_atari(self):
-        return str(self.env.env).split("<")[1] == 'AtariEnv'

@@ -20,6 +20,8 @@ class Project(BaseProject):
             "learning_rate": 0.00025,
             "max_episode_steps": 0,
             "n_history": 4,
+            "img_width": 84,
+            "img_height": 84
         }
 
     def init_env(self, hyper_params, monitor_func):
@@ -29,6 +31,9 @@ class Project(BaseProject):
             max_episode_steps = hyper_params['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0 and x > 50000),
             recent_score_len = 100,
+            n_history= hyper_params['n_history'],
+            width=hyper_params['img_width'],
+            height=hyper_params['img_height']
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):

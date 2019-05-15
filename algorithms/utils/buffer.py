@@ -17,7 +17,7 @@ class ReplayMemory():
         if self._cur_size == 0:
             for value in args:
                 value_size = list(np.shape(value))
-
+                print([self._max_size] + value_size[1:])
                 self._memory.append(np.zeros([self._max_size] + value_size[1:], \
                                     dtype=value.dtype))
 

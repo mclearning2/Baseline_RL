@@ -2,7 +2,7 @@ import numpy as np
 from typing import Callable
 
 from common.envs.gym import Gym
-from common.envs.help_function import cvt_gray_resize
+from common.envs.help_function import cvt_gray_resize_half
 
 class Atari(Gym):
     def __init__(
@@ -30,18 +30,18 @@ class Atari(Gym):
         self.width = width
         self.height = height
 
-    def _reset(self):
+    def _reset(self, state):
         # 0 ~ 30 time step 동안 에이전트를 가만히 두어 랜덤하게 시작 (No-op)
         for _ in range(1, np.random.randint(30)):
             state, _, _, info = self.env.step(self.env.random_action())
             self.lives = info[0]['ale.lives']
 
-        frame = cvt_gray_resize(state[0], self.height, self.width)
+        frame = cvt_gray_resize_half(state[0], self.height, self.width)
         self.history = np.stack([frame] * self.n_history)
 
     def reset(self):
         state = super().reset()
-        self._reset()
+        self._reset(state)
 
         return np.expand_dims(self.history, axis=0)
 
@@ -49,12 +49,12 @@ class Atari(Gym):
         next_state, reward, done, info = super().step(action)
 
         if done[0]:
-            next_state = cvt_gray_resize(next_state[0])
-            next_state = np.expand_dims(next_state, axis=0)
-
-            self.history = np.concate((self.history[1:, :, :], next_state), axis=0)
+            self._reset(next_state)
         else:
-            self._reset()
+            next_state = cvt_gray_resize_half(next_state[0], self.height, self.width)
+            next_state = np.expand_dims(next_state, axis=0)
+            
+            self.history = np.concatenate((self.history[1:, :, :], next_state), axis=0)            
 
         if self.lives > info[0]['ale.lives']:
             done = np.array([True])

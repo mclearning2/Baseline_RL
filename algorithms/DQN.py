@@ -67,12 +67,12 @@ class DQN(BaseAgent):
         total_step = 0
 
         state = self.env.reset()
-
+    
         while not self.env.is_episode_done():
             total_step += 1
 
             action = self.select_action(state)
-
+            
             next_state, reward, done, info = self.env.step(action)
 
             self.memory.save(state, action, reward, next_state, done)
@@ -86,7 +86,7 @@ class DQN(BaseAgent):
             if total_step % self.hp['target_update_period'] == 0:
                 hard_update(self.online_net, self.target_net)
 
-            if done[0]:
+            if self.env.done[0]:
                 self.write_log(
                     episode=self.env.episodes[0],
                     score=self.env.scores[0],

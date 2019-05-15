@@ -4,8 +4,7 @@ import numpy as np
 from typing import Callable
 from collections import deque
 
-from common.envs.multiprocessing_env import MultiEnv
-from common.envs.singleprocessing_env import SingleEnv
+from common.envs.multiprocessing_env import MultipleEnv
 
 class Gym:
     def __init__(
@@ -17,10 +16,8 @@ class Gym:
         recent_score_len: int = 100,
         monitor_func: Callable = lambda x: x,
     ):
-        if n_envs == 1:
-            self.env = SingleEnv(env_id, max_episode_steps, monitor_func)
-        else:
-            self.env = MultiEnv(env_id, n_envs, max_episode_steps, monitor_func)
+    
+        self.env = MultipleEnv(env_id, n_envs, max_episode_steps, monitor_func)
         
         self.env_id = env_id
         self.n_envs = n_envs

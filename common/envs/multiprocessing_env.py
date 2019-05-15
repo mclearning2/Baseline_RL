@@ -99,7 +99,7 @@ class CloudpickleWrapper(object):
     def __setstate__(self, ob):
         import pickle
         self.x = pickle.loads(ob)
-class MultiEnv(VecEnv):
+class MultipleEnv(VecEnv):
     def __init__(self, 
         env_id, 
         n_envs,

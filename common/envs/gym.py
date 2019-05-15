@@ -50,6 +50,9 @@ class Gym:
         self.scores[np.where(self.done)] = 0
         self.episodes[np.where(self.done)] += 1
 
+        if not self.is_discrete:
+            action = np.clip(action, self.low, self.high)
+
         next_state, reward, done, info = self.env.step(action)
 
         self.steps += 1

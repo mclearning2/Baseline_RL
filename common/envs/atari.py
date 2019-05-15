@@ -8,13 +8,14 @@ class Atari(Gym):
     def __init__(
         self,
         env_id: str, 
-        max_episode: int = 50000,
+        max_episode: int = 10000,
         max_episode_steps: int = None,
         recent_score_len: int = 100,
         monitor_func: Callable = lambda x: x,
         n_history: int = 4,
         width: int = 84,
         height: int = 84,
+        no_op: int = 30,
     ):
         super().__init__(
             env_id=env_id, 
@@ -29,10 +30,11 @@ class Atari(Gym):
         self.n_history = n_history
         self.width = width
         self.height = height
+        self.no_op = no_op
 
     def _reset(self, state):
         # 0 ~ 30 time step 동안 에이전트를 가만히 두어 랜덤하게 시작 (No-op)
-        for _ in range(1, np.random.randint(30)):
+        for _ in range(1, np.random.randint(self.no_op)):
             state, _, _, info = self.env.step(self.env.random_action())
             self.lives = info[0]['ale.lives']
 

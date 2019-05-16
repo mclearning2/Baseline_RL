@@ -8,18 +8,19 @@ from algorithms.DQN import DQN
 
 class Project(BaseProject):
     def init_hyper_params(self):
+        import numpy as np
         return {
             "eps_start": 1.0,
-            "eps_end": 0.01,
-            "eps_decay_steps": 10000,
-            "target_update_period": 300,
-            "memory_size": 2000,
-            "start_learning_step": 1000,
-            "batch_size": 64,
-            "discount_factor": 0.99,
-            "learning_rate": 0.001,
-            "max_episode_steps": 500,
-            "hidden_size": [10],
+            "eps_end": 0.1,
+            "eps_decay_steps": np.random.randint(1000, 10000),
+            "target_update_period": np.random.randint(100, 10000),
+            "memory_size": np.random.randint(100, 100000),
+            "start_learning_step": np.random.randint(100, 1000),
+            "batch_size": np.random.randint(1, 128),
+            "discount_factor": np.random.uniform(0.9, 0.99),
+            "learning_rate": np.random.uniform(0.0001, 0.01),
+            "max_episode_steps": 0,
+            "hidden_size": np.random.randint(4) * [np.random.randint(1, 128)],
         }
 
     def init_env(self, hyper_params, monitor_func):

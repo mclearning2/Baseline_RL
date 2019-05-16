@@ -137,9 +137,8 @@ class BaseProject(ABC):
             run_path = os.path.join(self.user_name, self.project, self.run_id)
 
             print(f"[INFO] Loaded from {run_path} in wandb cloud")
-            video_paths = glob(os.path.join(self.video_dir, "*.mp4"))
 
-            for path in [self.params_path, self.hyperparams_path] + list(video_paths):
+            for path in [self.params_path, self.hyperparams_path]:
                 
                 root = os.path.dirname(path)
                 name = os.path.basename(path)

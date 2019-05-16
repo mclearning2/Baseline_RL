@@ -76,6 +76,9 @@ class Gym:
         if done[0]:
             self.recent_scores.append(self.scores[0])
 
+        done = np.expand_dims(done, axis=1)
+        reward = np.expand_dims(reward, axis=1)
+
         return next_state, reward, done, info
 
     def close(self):

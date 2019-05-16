@@ -10,16 +10,18 @@ from algorithms.DDPG import DDPG
 class Project(BaseProject):
     def init_hyper_params(self):
         
+        import numpy as np
+
         return {
             "gamma": 0.99,
             "tau": 0.95,
-            "batch_size": 32,
+            "batch_size": 58,
             "memory_size": 1000000,
             "max_episode_steps": 0,
-            "actor_lr": 0.00476,
-            "critic_lr": 0.001858,
-            "actor_hidden_sizes": [47, 47, 47],
-            "critic_hidden_sizes": [117],
+            "actor_lr": 0.001165,
+            "critic_lr": 0.004501,
+            "actor_hidden_sizes": [57,57],
+            "critic_hidden_sizes": [8,8,8],
         }
 
     def init_env(self, hyper_params, monitor_func):

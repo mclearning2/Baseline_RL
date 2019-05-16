@@ -73,7 +73,7 @@ class DDPG(BaseAgent):
         actor_loss = - self.critic(state_action).mean()
         
         # Critic Loss
-        next_state_action  = torch.cat((next_states, self.target_actor(next_states) ), -1)
+        next_state_action  = torch.cat((next_states, self.target_actor(next_states)), -1)
         target_value = self.target_critic(next_state_action)
         
         target = rewards + (1.0 - dones) * gamma * target_value

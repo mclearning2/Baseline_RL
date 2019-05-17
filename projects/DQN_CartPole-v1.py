@@ -12,24 +12,25 @@ class Project(BaseProject):
         return {
             "eps_start": 1.0,
             "eps_end": 0.1,
-            "eps_decay_steps": np.random.randint(1000, 10000),
-            "target_update_period": np.random.randint(100, 10000),
-            "memory_size": np.random.randint(100, 100000),
-            "start_learning_step": np.random.randint(100, 1000),
-            "batch_size": np.random.randint(1, 128),
-            "discount_factor": np.random.uniform(0.9, 0.99),
-            "learning_rate": np.random.uniform(0.0001, 0.01),
+            "eps_decay_steps": 2000,
+            "n_worker": 1,
+            "target_update_period": 200,
+            "memory_size": 2000,
+            "start_learning_step": 1000,
+            "batch_size": 64,
+            "discount_factor": 0.99,
+            "learning_rate": 0.001,
             "max_episode_steps": 0,
-            "hidden_size": np.random.randint(4) * [np.random.randint(1, 128)],
+            "hidden_size": [24, 24],
         }
 
     def init_env(self, hyper_params, monitor_func):
         return Gym(
             env_id='CartPole-v1',
-            n_envs=8,
-            max_episode=3000,
+            n_envs=hyper_params['n_worker'],
+            max_episode=1000,
             max_episode_steps=hyper_params['max_episode_steps'],
-            monitor_func=monitor_func(None),#monitor_func(lambda x: x % 50 == 0),
+            monitor_func=monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
         )
 
@@ -39,7 +40,6 @@ class Project(BaseProject):
                 input_size=input_size,
                 output_size=output_size,
                 hidden_sizes=hyper_params['hidden_size'],
-                output_activation=nn.Softmax(-1)
             ).to(device)
 
         online_net = modeling()

@@ -48,9 +48,10 @@ class DQN(BaseAgent):
         dones = torch.FloatTensor(dones.astype(np.uint8)).to(self.device)
 
         q = self.online_net(states)
-        logits = q.gather(1, actions.unsqueeze(1)).squeeze()
+        logits = q.gather(1, actions)
 
-        target_q_max = self.target_net(next_states).max(1)[0]
+        target_q_max = self.target_net(next_states).max(1)[0].unsqueeze(1)
+
         target = rewards + (1-dones) * target_q_max * self.hp['discount_factor']
 
         loss = F.smooth_l1_loss(logits, target.detach())
@@ -64,13 +65,11 @@ class DQN(BaseAgent):
         self.optim.step()
 
     def train(self):
-        total_step = 0
-
         state = self.env.reset()
     
-        while not self.env.is_episode_done():
+        total_step = 0
+        while not self.env.is_episode_done():            
             total_step += 1
-
             action = self.select_action(state)
             
             next_state, reward, done, info = self.env.step(action)
@@ -89,12 +88,12 @@ class DQN(BaseAgent):
             if self.env.done[0]:
                 self.write_log(
                     episode=self.env.episodes[0],
-                    score=self.env.scores[0],
                     steps=self.env.steps[0],
-                    total_step=total_step,
+                    score=self.env.scores[0],                    
                     recent_scores=np.mean(self.env.recent_scores),
                     epsilon=self.epsilon,
                     memory_size=len(self.memory),
+                    total_step=total_step,
                 )
 
 

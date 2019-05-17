@@ -49,7 +49,13 @@ class ReplayMemory():
             # save arguments
             for arg in args:
                 # [memory size, The shape of argument without n_worker]
-                arg_memory_size = [self._max_size] + list(np.shape(arg))[1:]
+
+                arg_shape = list(np.shape(arg))[1:] 
+                
+                if arg_shape == []:
+                    arg_shape = [1]
+
+                arg_memory_size = [self._max_size] + arg_shape
 
                 # Generate memory(numpy) with zeros
                 self._memory.append(np.zeros(arg_memory_size, dtype=arg.dtype))

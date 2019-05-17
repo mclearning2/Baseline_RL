@@ -65,7 +65,7 @@ class Gym:
 
             if self.clip_action:
                 action = np.clip(action, self.low, self.high)
-
+        
         next_state, reward, done, info = self.env.step(action)
 
         done[np.where(self.steps == self.max_episode_steps)] = False

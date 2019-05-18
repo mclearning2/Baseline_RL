@@ -86,14 +86,12 @@ Comming soon...
 
 ## Algorithms
 
-앞으로도 계속 더 늘어날 예정입니다.
-
 ### Model-Free RL
-- [ ] **(DQN)** Playing Atari with Deep Reinforcement Learning, Mnih et al, 2013.
+- [x] **(DQN)** Playing Atari with Deep Reinforcement Learning, Mnih et al, 2013.
 - [ ] **(Deep Recurrent Q-Learning)** Deep Recurrent Q-Learning for Partially Observable MDPs, Hausknecht and Stone, 2015. 
-- [ ] **(Dueling DQN)** Dueling Network Architectures for Deep Reinforcement Learning, Wang et al, 2015. 
-- [ ] **(Double DQN)** Deep Reinforcement Learning with Double Q-learning, Hasselt et al 2015.
-- [ ] **(PER)** Prioritized Experience Replay, Schaul et al, 2015.
+- [x] **(Dueling DQN)** Dueling Network Architectures for Deep Reinforcement Learning, Wang et al, 2015. 
+- [x] **(Double DQN)** Deep Reinforcement Learning with Double Q-learning, Hasselt et al 2015.
+- [x] **(PER)** Prioritized Experience Replay, Schaul et al, 2015.
 - [ ] **(Rainbow DQN)** Rainbow: Combining Improvements in Deep Reinforcement Learning, Hessel et al, 2017.
 
 ### Policy Gradients

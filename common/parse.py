@@ -78,10 +78,11 @@ def get_config_and_module():
 
     # Select module to run
     if not config.project:
-        config.project = select_project("projects")
+        algo_dir = select_project_type("projects")
+        config.project = select_project(algo_dir)
 
     # Import module
-    import_name = "projects." + config.project
+    import_name = algo_dir.replace("/", ".") + "." + config.project
     module = importlib.import_module(import_name)
 
     # Initialize path to save information by project name
@@ -91,10 +92,12 @@ def get_config_and_module():
 
     return config, module
 
-def select_project(dir_name):
+
+def select_project_type(dir_name):
     ''' 실행시 dir_name에 있는 파일들 중 하나를 선택하도록 한다.
         선택한 파일 중 하나를 고르면 그 파일 이름만 반환한다.
     '''
+
     style = style_from_dict({
         Token.Separator: '#cc0000',
         Token.QuestionMark: '#673ab7 bold',
@@ -105,19 +108,50 @@ def select_project(dir_name):
         Token.Question: '',
     })
 
-    choices = [Separator('== Algorithms with environment ==')]
-    for file in sorted(glob(os.path.join(dir_name, '*.py'))):
+    choices_type = [Separator('== Algorithms Type ==')]
+    for algo_type in sorted(os.listdir(dir_name)):
+        if algo_type != "__pycache__" and \
+           os.path.isdir(os.path.join(dir_name,algo_type)):
+            choices_type.append(algo_type)
+
+    questions = {
+        'type': 'list',
+        'message': 'Select the algorithm type.',
+        'name': dir_name,
+        'choices': choices_type
+    }
+
+    algo_type = prompt(questions, style=style)[dir_name]
+
+    return os.path.join(dir_name, algo_type)
+
+def select_project(algo_dir):
+    
+    style = style_from_dict({
+        Token.Separator: '#cc0000',
+        Token.QuestionMark: '#673ab7 bold',
+        Token.Selected: '#cc5454',  # default
+        Token.Pointer: '#673ab7 bold',
+        Token.Instruction: '',  # default
+        Token.Answer: '#f44336 bold',
+        Token.Question: '',
+    })
+
+    choices = [Separator('== Select Algorithms ==')]
+    for file in sorted(glob(os.path.join(algo_dir, '*.py'))):
         choices.append({'name': file})
 
     questions = {
         'type': 'list',
-        'message': 'Select the algorithm you want to run in directory ',
-        'name': dir_name,
+        'message': 'Select the algorithm.',
+        'name': algo_dir,
         'choices': choices
     }
+    
+    project_file = prompt(questions, style=style)[algo_dir]
 
-    project_file = prompt(questions, style=style)[dir_name]
     file_name = os.path.basename(project_file)
     file_name_without_ext = os.path.splitext(file_name)[0]
+
 
     return file_name_without_ext

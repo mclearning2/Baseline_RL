@@ -94,13 +94,13 @@ class SepMLP(nn.Module):
 
         return output1, output2
 
-class ShareMLP(nn.Module):
+class ShareMLP(MLP):
     def __init__(
         self,
         input_size: int,
         hidden_sizes: list,
-        output_size1: int,
-        output_size2: int,
+        output_sizes1: list,
+        output_sizes2: list,
         hidden_activation: Callable = nn.ReLU(),
         output_activation1: Callable = nn.Sequential(), # identity
         output_activation2: Callable = nn.Sequential(), # identity
@@ -117,17 +117,33 @@ class ShareMLP(nn.Module):
 
         last_size = hidden_sizes[-1] if hidden_sizes else input_size
 
-        self.mlp1.add_module("output1", nn.Linear(last_size, output_size1))
-        self.mlp1.add_module("output_act1", output_activation1)
+        prev_size = last_size
+        for i in range(len(output_sizes1)):
+            next_size = output_sizes1[i]
+            self.mlp1.add_module(f"hidden1_fc{i}", nn.Linear(prev_size, next_size))
+            if i < len(output_sizes1) - 1:
+                self.mlp1.add_module(f"hidden1_fc_act{i}", hidden_activation)
+            else:
+                self.mlp1.add_module(f"hidden1_fc_act{i}", output_activation1)
+            prev_size = next_size
 
-        self.mlp2.add_module("output2", nn.Linear(last_size, output_size2))
-        self.mlp2.add_module("output_act2", output_activation2)
+        prev_size = last_size
+        for i in range(len(output_sizes2)):
+            next_size = output_sizes2[i]
+            self.mlp2.add_module(f"hidden2_fc{i}", nn.Linear(prev_size, next_size))
+            if i < len(output_sizes2) - 1:
+                self.mlp2.add_module(f"hidden2_fc_act{i}", hidden_activation)
+            else:
+                self.mlp2.add_module(f"hidden2_fc_act{i}", output_activation2)
+            prev_size = next_size
 
         self.apply(init_linear_weights_xavier)
 
     def forward(self, x):
-        output1 = self.mlp1(x)
-        output2 = self.mlp2(x)
+        hidden = super().forward(x)
+
+        output1 = self.mlp1(hidden)
+        output2 = self.mlp2(hidden)
 
         return output1, output2
 

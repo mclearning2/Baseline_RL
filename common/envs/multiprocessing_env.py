@@ -185,7 +185,7 @@ class MultipleEnv(VecEnv):
 
     def random_action(self):
         for remote in self.remotes:
-            remote.send(('random_action', None))
+            remote.send(('random_action', None))    
         return np.stack([remote.recv() for remote in self.remotes])
 
     def close(self):

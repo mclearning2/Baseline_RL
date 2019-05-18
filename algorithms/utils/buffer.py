@@ -78,3 +78,43 @@ class ReplayMemory():
             sampled_memory.append(values[rand_indexes])
 
         return sampled_memory
+
+
+class PrioritizedReplayMemory(ReplayMemory):
+    def __init__(self, capacity, prob_alpha=0.6):
+        super().__init__(capacity)
+
+        self._prob_alpha = prob_alpha
+        self._priorities = np.ones([capacity], dtype=np.float32)
+    
+    def save(self, *args):
+        n_worker = np.shape(args[0])[0]
+        super().save(*args)
+
+        for i in range(n_worker):
+            
+            max_prio = self._priorities.max()
+            self._priorities[self._index - n_worker + i] = max_prio
+
+    def sample(self, batch_size, beta=0.4):
+        prios = self._priorities[:self._cur_size]
+        probs = prios ** self._prob_alpha
+        probs /= probs.sum()
+
+        indices = np.random.choice(self._cur_size, batch_size, p=probs)
+
+        weights = (self._cur_size * probs[indices]) ** (-beta)
+        weights /= weights.max()
+        weights = np.array(weights, dtype=np.float32)
+        
+        sampled_memory = list()
+        for values in self._memory:
+            sampled_memory.append(values[indices])
+        
+        sampled_memory.append(indices)
+        sampled_memory.append(weights)
+
+        return sampled_memory
+
+    def update_priorities(self, indices, priorities):
+        self._priorities[indices] = priorities

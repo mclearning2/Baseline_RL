@@ -20,8 +20,7 @@ class Project(BaseProject):
             "discount_factor": 0.99,
             "learning_rate": 0.001,
             "max_episode_steps": 0,
-            "hidden_sizes": [256],
-            "double_q": True,            
+            "hidden_size": [256, 256],      
         }
 
     def init_env(self, hyper_params, monitor_func):

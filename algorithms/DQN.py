@@ -11,7 +11,7 @@ class DQN(BaseAgent):
     def __init__(self, env, online_net, target_net, optim, device, hyper_params):
         self.env = env
         self.device = device
-        if hyper_params['dueling_q']:
+        if hyper_params.get('dueling_q'):
             self.online_net = DuelingNet(online_net)
             self.target_net = DuelingNet(target_net)
         else:
@@ -26,7 +26,7 @@ class DQN(BaseAgent):
         self.eps_decay = (self.hp['eps_start'] - self.hp['eps_end']) \
                         / self.hp['eps_decay_steps']
 
-        if self.hp['prioritized']:
+        if self.hp.get('prioritized'):
             self.beta = self.hp['beta_start']
             self.beta_update = (1 - self.hp['beta_start']) / self.hp['beta_increase_steps']
             self.memory = PrioritizedReplayMemory(self.hp['memory_size'], self.hp['alpha'])
@@ -52,7 +52,7 @@ class DQN(BaseAgent):
         return action
         
     def train_model(self):
-        if self.hp['prioritized']:
+        if self.hp.get('prioritized'):
             states, actions, rewards, next_states, dones, indices, weights = \
                 self.memory.sample(self.hp['batch_size'], self.beta)
             
@@ -60,6 +60,7 @@ class DQN(BaseAgent):
         else:
             states, actions, rewards, next_states, dones = \
                 self.memory.sample(self.hp['batch_size'])
+            weights = 1
 
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.LongTensor(actions).to(self.device)
@@ -70,7 +71,7 @@ class DQN(BaseAgent):
         q = self.online_net(states)
         logits = q.gather(1, actions)
 
-        if self.hp['double_q']:
+        if self.hp.get('double_q'):
             next_q = self.online_net(next_states)
             next_target_q = self.target_net(next_states)
             
@@ -88,7 +89,7 @@ class DQN(BaseAgent):
         self.optim.zero_grad()
         loss.backward()
 
-        if self.hp['prioritized']:
+        if self.hp.get('prioritized'):
             self.memory.update_priorities(indices, prios.detach().cpu().numpy())
 
         for param in self.online_net.parameters():
@@ -111,7 +112,8 @@ class DQN(BaseAgent):
             state = next_state
 
             if total_step > self.hp['start_learning_step']:
-                self.increase_beta()
+                if self.hp.get("prioritized"):
+                    self.increase_beta()
                 self.decay_epsilon()
                 self.train_model()
 

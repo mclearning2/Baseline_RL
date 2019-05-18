@@ -3,7 +3,7 @@ import torch.optim as optim
 
 from common.envs.gym import Gym
 from common.abstract.base_project import BaseProject
-from common.models.mlp import MLP, ShareMLP
+from common.models.mlp import MLP
 from algorithms.DQN import DQN
 
 class Project(BaseProject):
@@ -20,10 +20,8 @@ class Project(BaseProject):
             "discount_factor": 0.99,
             "learning_rate": 0.001,
             "max_episode_steps": 0,
-            "hidden_size": [256],
-            "advantage_hidden_size": [128],
-            "value_hidden_size": [128],
-            "dueling_q": True,
+            "hidden_size": [256, 256],
+            "double_q": True,            
         }
 
     def init_env(self, hyper_params, monitor_func):
@@ -38,19 +36,11 @@ class Project(BaseProject):
 
     def init_model(self, input_size, output_size, device, hyper_params):
         def modeling():
-            if hyper_params['dueling_q']:
-                return ShareMLP(
-                    input_size=input_size,
-                    hidden_sizes=hyper_params["hidden_size"],
-                    output_sizes1=hyper_params['advantage_hidden_size'] + [output_size],
-                    output_sizes2=hyper_params['value_hidden_size'] + [1],
-                ).to(device)
-            else:
-                return MLP(
-                    input_size=input_size,
-                    output_size=output_size,
-                    hidden_sizes=hyper_params["hidden_size"]
-                ).to(device)
+            return MLP(
+                input_size=input_size,
+                output_size=output_size,
+                hidden_sizes=hyper_params['hidden_size'],
+            ).to(device)
 
         online_net = modeling()
         target_net = modeling()

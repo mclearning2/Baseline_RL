@@ -9,10 +9,13 @@ from algorithms.DQN import DQN
 class Project(BaseProject):
     def init_hyper_params(self):
         return {
+            "alpha": 0.6,
+            "beta_start": 0.4,
+            "beta_increase_steps": 3000,
             "eps_start": 1.0,
             "eps_end": 0.1,
             "eps_decay_steps": 5000,
-            "n_worker": 8,
+            "n_worker": 2,
             "target_update_period": 600,
             "memory_size": 20000,
             "start_learning_step": 1000,
@@ -23,7 +26,7 @@ class Project(BaseProject):
             "hidden_size": [256],
             "advantage_hidden_size": [128],
             "value_hidden_size": [128],
-            "dueling_q": True,
+            "prioritized": True,
         }
 
     def init_env(self, hyper_params, monitor_func):

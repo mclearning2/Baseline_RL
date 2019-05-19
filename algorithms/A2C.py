@@ -34,9 +34,8 @@ class A2C(BaseAgent):
         self.entropy = 0
 
     def select_action(self, state: np.ndarray) -> np.ndarray:
-        
+    
         state = torch.FloatTensor(state).to(self.device)
-        
         dist, value = self.model.forward(state)        
         
         action = dist.sample()
@@ -91,8 +90,8 @@ class A2C(BaseAgent):
 
                 reward = torch.FloatTensor(reward).to(self.device)
                 done = torch.FloatTensor(done.astype(np.float)).to(self.device)
-                self.rewards.append(reward.unsqueeze(1))
-                self.masks.append(1-done.unsqueeze(1))
+                self.rewards.append(reward)
+                self.masks.append(1-done)
                                 
                 state = next_state
 

@@ -309,3 +309,20 @@ class ShareActorCritic(ShareMLP):
         
         else:
             raise TypeError("Normal or Categorical")
+
+class DuelingMLP(ShareMLP):
+    def forward(self, state):
+        output1, output2 = super().forward(state)
+
+        assert output1.size()[-1] == 1 or output2.size()[-1] == 1
+
+        if output1.size()[-1] == 1:
+            value = output1
+            advantage = output2
+        elif output2.size()[-1] == 1:
+            value = output2
+            advantage = output1
+        else:
+            raise ValueError("The size of output1 or output2 must be 1 for value")
+
+        return value + advantage - advantage.mean()

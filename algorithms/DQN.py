@@ -11,14 +11,10 @@ class DQN(BaseAgent):
     def __init__(self, env, online_net, target_net, optim, device, hyper_params):
         self.env = env
         self.device = device
-        if hyper_params.get('dueling_q'):
-            self.online_net = DuelingNet(online_net)
-            self.target_net = DuelingNet(target_net)
-        else:
-            self.online_net = online_net
-            self.target_net = target_net            
-
         self.optim = optim
+    
+        self.online_net = online_net
+        self.target_net = target_net            
 
         self.hp = hyper_params
         
@@ -45,9 +41,9 @@ class DQN(BaseAgent):
         if np.random.rand() <= self.epsilon:
             action = self.env.random_action()
         else:
-            state = torch.FloatTensor(state).to(self.device)
-
-            action = self.online_net(state).argmax(1).cpu().numpy()
+            with torch.no_grad():
+                state = torch.FloatTensor(state).to(self.device)
+                action = self.online_net(state).argmax(1).cpu().numpy()
             
         return action
         
@@ -130,22 +126,3 @@ class DQN(BaseAgent):
                     memory_size=len(self.memory),
                     total_step=total_step,
                 )
-
-class DuelingNet:
-    def __init__(self, net):
-        self.net = net
-
-    def __call__(self, state):
-        advantage, value = self.net(state)
-
-        return value + advantage - advantage.mean()
-
-    def load_state_dict(self, state_dict):
-        self.net.load_state_dict(state_dict)
-    
-    @property
-    def state_dict(self):
-        return self.net.state_dict
-
-    def parameters(self):
-        return self.net.parameters()

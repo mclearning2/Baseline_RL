@@ -41,19 +41,11 @@ class Project(BaseProject):
 
     def init_model(self, input_size, output_size, device, hyper_params):
         def modeling():
-            if hyper_params['dueling_q']:
-                return ShareMLP(
-                    input_size=input_size,
-                    hidden_sizes=hyper_params["hidden_size"],
-                    output_sizes1=hyper_params['advantage_hidden_size'] + [output_size],
-                    output_sizes2=hyper_params['value_hidden_size'] + [1],
-                ).to(device)
-            else:
-                return MLP(
-                    input_size=input_size,
-                    output_size=output_size,
-                    hidden_sizes=hyper_params["hidden_size"]
-                ).to(device)
+            return MLP(
+                input_size=input_size,
+                output_size=output_size,
+                hidden_sizes=hyper_params["hidden_size"]
+            ).to(device)
 
         online_net = modeling()
         target_net = modeling()

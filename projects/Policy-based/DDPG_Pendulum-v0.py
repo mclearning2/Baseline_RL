@@ -10,8 +10,6 @@ from algorithms.DDPG import DDPG
 class Project(BaseProject):
     def init_hyper_params(self):
         
-        import numpy as np
-
         return {
             "gamma": 0.99,
             "tau": 0.95,

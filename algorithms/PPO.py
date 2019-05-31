@@ -40,7 +40,7 @@ class PPO(BaseAgent):
 
         state = torch.FloatTensor(state).to(self.device)
         
-        dist, value = self.model.forward(state)
+        dist, value = self.model(state)
         
         action = dist.sample()
 

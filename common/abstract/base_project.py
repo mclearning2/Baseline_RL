@@ -9,7 +9,7 @@ from gym.wrappers import Monitor
 from abc import ABC, abstractmethod
 
 from common.envs.gym import Gym
-from common.help_function import check_path_or_make_dir, set_random_seed, remove_dir
+from common.utils import check_path_or_make_dir, set_random_seed, remove_dir
 
 class BaseProject(ABC):
     ''' Baseline of project that helps to implementation of various experiment.

@@ -1,8 +1,15 @@
+import cv2
 import numpy as np
 from typing import Callable
 
 from common.envs.gym import Gym
-from common.envs.help_function import cvt_gray_resize_half
+
+def cvt_gray_resize_half(frame, height = 84, width = 84):
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    frame = cv2.resize(frame, (width, height), 
+                    interpolation=cv2.INTER_AREA)
+    
+    return frame
 
 class Atari(Gym):
     def __init__(

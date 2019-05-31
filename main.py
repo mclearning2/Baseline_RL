@@ -4,17 +4,20 @@
 #               다양하게 쉽게 구현하기 위한 프로젝트
 
 import os
-import importlib
 
-from common.parse import get_config_and_module
-
-from pyfiglet import Figlet
+from common.parse import get_config, select_project, import_module
 
 if __name__ == '__main__':
-    f = Figlet(font='slant')
-    print(f.renderText("Baseline RL"))
 
-    config, module = get_config_and_module()
+    config = get_config()
 
+    project_path = select_project() # e.g. projects/policy-based/A2C_CartPole-v1.py
+
+    config.project = os.path.basename(project_path).split(".")[0]
+    config.video_dir = os.path.join('report/videos', config.project)
+    config.params_path = os.path.join('report/model', config.project, 'model.pt')
+    config.hyperparams_path = os.path.join('report/model', config.project, 'hyperparams.pkl')
+
+    module = import_module(project_path)
     project = module.Project(config)
     project.run() 

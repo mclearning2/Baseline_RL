@@ -6,7 +6,7 @@ from collections import deque
 
 from common.envs.multiprocessing_env import MultipleEnv
 
-class Gym:
+class Classic:
     def __init__(
         self,
         env_id: str, 
@@ -18,6 +18,25 @@ class Gym:
         clip_action: bool = True,
         scale_action: bool = False,
     ):
+    ''' 
+
+    Args:
+        env_id: 이 클래스는 다음 환경들을 사용할 수 있습니다.
+            < Classic Control >
+            - Acrobot-v1
+            - CartPole-v1
+            - MountainCar-v0
+            - MountainCarContinuous-v0
+            - Pendulum-v0
+
+            < Box2D >
+            - BipedalWalker-v2
+            - BipedalWalkerHardcore-v2
+            - LunarLander-v2
+            - LunarLanderContinuous-v2
+        n_envs: The number of multiprocessing environment 
+        max_episode: 
+    ''' 
     
         self.env = MultipleEnv(env_id, n_envs, max_episode_steps, monitor_func)
         
@@ -96,3 +115,4 @@ class Gym:
 
     def is_episode_done(self):
         return self.max_episode < self.episodes[0]
+

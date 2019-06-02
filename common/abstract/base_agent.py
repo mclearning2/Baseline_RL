@@ -3,17 +3,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 class BaseAgent(ABC):
-    ''' The baseline of BaseAgent.
-        
-        What you need to implement
-        - select_action(self, state)
-        - train_model(self)
-        - train(self)
-
-        Implemented
-        - write_log(self, **kargs)
-        - test(self)
-    '''
     @abstractmethod
     def select_action(self, state):
         pass

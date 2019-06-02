@@ -28,14 +28,14 @@ def get_config() -> argparse.Namespace:
 
     parser.add_argument("-s", "--seed", type=int, default=1)
 
-    parser.add_argument("-t", "--test_mode", dest="test_mode", action="store_true")
+    parser.add_argument("-t", "--test", dest="test", action="store_true")
     parser.add_argument("-l", "--restore", dest="restore", action="store_true")
     parser.add_argument("-d", "--render", dest="render", action="store_true")
     parser.add_argument("-c", "--record", dest="record", action="store_true")
 
     parser.add_argument("--report_dir", type=str, default="report")
 
-    parser.set_defaults(test_mode=False)
+    parser.set_defaults(test=False)
     parser.set_defaults(restore=False)
     parser.set_defaults(render=False)
     parser.set_defaults(record=False)
@@ -100,7 +100,7 @@ def select_project() -> str:
 
     return selected_project
 
-def import_module(project_path):
+def import_module(project_path: str):
 
     import_name = project_path.split('.')[0].replace("/", ".")
     module = importlib.import_module(import_name)

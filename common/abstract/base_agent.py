@@ -46,9 +46,10 @@ class BaseAgent(ABC):
         for name, value in kargs.items():
             if isinstance(value, (int, np.integer)):
                 s += f"{name} : {value} | "
-            else:
+            elif isinstance(value, (float, np.float)):
                 s += f"{name} : {value:.3f} | "
-            
+            else:
+                s += name + " : " + str(value)
         print(s)
     
         wandb.log(kargs)

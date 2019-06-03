@@ -19,7 +19,6 @@ class Classic:
         scale_action: bool = False,
     ):
     ''' 
-
     Args:
         env_id: 이 클래스는 다음 환경들을 사용할 수 있습니다.
             < Classic Control >
@@ -34,8 +33,16 @@ class Classic:
             - BipedalWalkerHardcore-v2
             - LunarLander-v2
             - LunarLanderContinuous-v2
-        n_envs: The number of multiprocessing environment 
-        max_episode: 
+
+        n_envs: 멀티프로세싱을 위한 worker 수
+        max_episode: 최대 에피소드 수. 이 수를 넘으면 종료
+        max_episode_steps: 최대 step 수. 이 수가 지나면 done
+        recent_score_len: 한 에피소드의 보상의 합인 score(return)을 저장하고
+                          평균을 구할 때 최근 몇 에피소드를 구할 지
+        monitor_func: video를 record할 때 쓰는 함수
+        clip_action: action을 -1과 1사이로 클립할 지 여부 (continuous만)
+        scale_action: action을 환경의 low와 high에 맞게 정규화
+                      (-1 ~ 1 -> low ~ high)
     ''' 
     
         self.env = MultipleEnv(env_id, n_envs, max_episode_steps, monitor_func)

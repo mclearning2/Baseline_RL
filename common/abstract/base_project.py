@@ -1,7 +1,6 @@
 import os
 import wandb
 import torch
-import pickle
 import random
 import argparse
 import numpy as np
@@ -10,9 +9,13 @@ from typing import Union, Callable, Dict
 from gym.wrappers import Monitor
 from abc import ABC, abstractmethod
 
-from common.envs.gym import Gym
-from common.utils import check_path_and_make_dir, remove_dir
-from common.utils import restore_wandb, restore_hyper_params
+from common.utils import restore_wandb
+from common.utils import restore_hyper_params
+from common.utils import restore_model_params
+
+from common.utils import save_hyper_params
+from common.utils import save_model_params
+from common.utils import save_wandb
 
 class BaseProject(ABC):
     ''' 이 클래스를 상속해서 다음과 같은 함수들을 구현하면
@@ -44,10 +47,11 @@ class BaseProject(ABC):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     @abstractmethod
-    def init_hyper_params(self
-    ) -> dict:
-        ''' Implement and return hyperparameters dictionary
-            if self.restore == True, restored from self.hyperparams_path
+    def init_hyper_params(self) -> dict:
+        ''' project에서 사용될 하이퍼파라미터들을 딕셔너리로 구현
+
+            만약 self.restore == True일 경우,
+            `report/model/{project name}/hyperparams.pkl`에서 복원해서 넣는다.
 
         Example:
             return { "gamma": 0.99,
@@ -56,33 +60,37 @@ class BaseProject(ABC):
 
     @abstractmethod
     def init_env(self, 
-        hyper_params: dict,
-        monitor_func: Callable,         
-    ) -> Gym:
-        ''' Implement and return environment class.
-            Environment is used from one of {project_folder}/common/envs
+        hyper_params: dict, 
+        render_available: bool,
+        monitor_func: Callable):
+        ''' `common/envs/ 에 있는 클래스 들 중 하나를 구현 후 반환
 
         Args:
-            monitor_func: Recording function. argument is video_callable
-                          It will be saved in self.video_dir
-            hyper_params: dictionary from self.init_hyper_params()
+            hyper_params: self.init_hyper_params()에서 구현한 딕셔너리
+            monitor_func: self.monitor_func
+            
 
         Examples:
-            return Atari(env_id = 'Breakout-v4', ...)
+            return Atari(env_id = 'Breakout-v4', 
+                         n_envs = 4,
+                         monitor_func = monitor_func(lambda x: x % 50 == 0)
+                         )
         '''
 
     @abstractmethod
     def init_model(self, 
-        env: Gym,
+        state_size: Union[list, int],
+        action_size: int,
         device: str,
         hyper_params: dict
     ) -> Dict[str, Union[torch.nn.Module, torch.optim.Optimizer]]:
-        ''' Implement and return model.
+        ''' 모델과 옵티마이저를 구현하고 반환
 
         Args:
-            env: environment from self.init_env()
-            device: pytorch cuda or cpu
-            hyper_params: dictionary from self.init_hyper_params()
+            state_size: model의 입력으로 사용되는 환경 상태 크기
+            action_size: model의 출력으로 사용되는 환경 행동 수 
+            device: self.device
+            hyper_params: self.init_hyper_params()에서 구현한 딕셔너리
         
         Examples:
             model = MLP(...)
@@ -93,24 +101,27 @@ class BaseProject(ABC):
 
     @abstractmethod
     def init_agent(self, 
-        env: Gym, 
+        env, 
         model: dict, 
         device: str, 
         hyper_params: dict
     ):
-        '''Implement and return agent.
+        ''' algorithms/ 안의 에이전트 구현 후 반환
 
         Args:
-            env: environment from self.init_env()
-            model: dictionary from self.init_model()
+            env: self.init_env()에서 구현한 환경
+            model: self.init_model()에서 구현한 모델
             device: PyTorch cuda or cpu
-            hyper_params: dictionary from self.init_hyper_params()
+            hyper_params: self.init_hyper_params()에서 구현한 하이퍼파라미터
 
         Examples:
             return A2C(...)
         '''
 
     def monitor_func(self, video_callable=None, *args, **kargs):
+        ''' init_env의 argument에 들어가는 함수.
+            init_env 
+        '''
         def _func(env):
             print("[INFO] Video(mp4) will be saved in " + self.video_dir)
             return Monitor(
@@ -141,7 +152,7 @@ class BaseProject(ABC):
         # Hyper parameters
         #===================================================================
         if self.restore:
-            hyper_params = self._init_hyper_params()
+            hyper_params = self.init_hyper_params()
             print("[INFO] Initialized hyperparameters")
         else:
             hyper_params = restore_hyper_params(self.hyperparams_path)
@@ -151,8 +162,7 @@ class BaseProject(ABC):
 
         # Environment
         #===================================================================
-        env = self.init_env(hyper_params, self.monitor_func)
-        env.render_available = self.render
+        env = self.init_env(hyper_params, self.render, self.monitor_func)
         print(f"[INFO] Initialized environment")
         #===================================================================
         
@@ -168,8 +178,8 @@ class BaseProject(ABC):
         # Model
         #===================================================================
         model = self.init_model(
-            input_size=env.state_size,
-            output_size=env.action_size,
+            state_size=env.state_size,
+            action_size=env.action_size,
             device=self.device,
             hyper_params=hyper_params
         )

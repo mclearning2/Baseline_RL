@@ -30,8 +30,11 @@ class DDPG(BaseAgent):
         target_actor, target_critic,
         actor_optim, critic_optim,
         device: str,
-        hyper_params: dict
+        hyper_params: dict,
+        tensorboard_path: str
     ):
+        super().__init__(tensorboard_path)
+
         self.env = env
         self.device = device
         self.actor = actor
@@ -98,7 +101,7 @@ class DDPG(BaseAgent):
         state = self.env.reset()
         self.noise.reset()
         
-        while self.env.episodes[0] < self.env.max_episode + 1:   
+        while not self.env.is_first_env_done():
             action = self.select_action(state)
             action += self.noise.sample()
 
@@ -115,9 +118,10 @@ class DDPG(BaseAgent):
                 self.noise.reset()
 
                 self.write_log(
+                    global_step = self.env.total_step,
                     episode=self.env.episodes[0],
                     score=self.env.scores[0],
-                    steps=self.env.steps[0],
+                    steps=self.env.step_per_ep[0],
                     recent_scores=np.mean(self.env.recent_scores)
                 )
 

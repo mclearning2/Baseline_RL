@@ -37,12 +37,14 @@ class BaseProject(ABC):
         self.test = config.test
         self.restore = config.restore
         self.render = config.render
+        self.record = config.record
 
         self.report_dir = config.report_dir
 
         self.video_dir = config.video_dir
         self.params_path = config.params_path
         self.hyperparams_path = config.hyperparams_path
+        self.tensorboard_path = config.tensorboard_path
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -103,8 +105,9 @@ class BaseProject(ABC):
     def init_agent(self, 
         env, 
         model: dict, 
-        device: str, 
-        hyper_params: dict
+        device: str,
+        hyper_params: dict,
+        tensorboard_path: str,
     ):
         ''' algorithms/ 안의 에이전트 구현 후 반환
 
@@ -113,6 +116,7 @@ class BaseProject(ABC):
             model: self.init_model()에서 구현한 모델
             device: PyTorch cuda or cpu
             hyper_params: self.init_hyper_params()에서 구현한 하이퍼파라미터
+            tensorboard_path: 텐서보드를 저장할 경로
 
         Examples:
             return A2C(...)
@@ -123,15 +127,19 @@ class BaseProject(ABC):
             init_env 
         '''
         def _func(env):
-            print("[INFO] Video(mp4) will be saved in " + self.video_dir)
-            return Monitor(
-                env=env,
-                directory=self.video_dir,
-                video_callable=video_callable,
-                force=True,
-                *args,
-                **kargs
-            )
+            if self.record:
+                
+                print("[INFO] Video(mp4) will be saved in " + self.video_dir)
+                return Monitor(
+                    env=env,
+                    directory=self.video_dir,
+                    video_callable=video_callable,
+                    force=True,
+                    *args,
+                    **kargs
+                )
+            else:
+                return env
         
         return _func
 
@@ -152,12 +160,12 @@ class BaseProject(ABC):
         # Hyper parameters
         #===================================================================
         if self.restore:
-            hyper_params = self.init_hyper_params()
-            print("[INFO] Initialized hyperparameters")
-        else:
             hyper_params = restore_hyper_params(self.hyperparams_path)
             print("[INFO] Loaded hyperparameters from " \
                  + self.hyperparams_path)
+        else:
+            hyper_params = self.init_hyper_params()
+            print("[INFO] Initialized hyperparameters")
         #===================================================================
 
         # Environment
@@ -194,7 +202,12 @@ class BaseProject(ABC):
 
         # Agent
         #===================================================================
-        agent = self.init_agent(env, model, self.device, hyper_params)
+        agent = self.init_agent(
+            env = env, 
+            model = model, 
+            device = self.device, 
+            hyper_params = hyper_params,
+            tensorboard_path = self.tensorboard_path)
         print("[INFO] Initialized agent")
         #===================================================================
 
@@ -211,8 +224,6 @@ class BaseProject(ABC):
                 config=hyper_params, 
                 dir='report'
             )
-
-            print(model)
 
             try:
                 agent.train()

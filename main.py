@@ -17,6 +17,7 @@ if __name__ == '__main__':
     config.video_dir = os.path.join('report/videos', config.project)
     config.params_path = os.path.join('report/model', config.project, 'model.pt')
     config.hyperparams_path = os.path.join('report/model', config.project, 'hyperparams.pkl')
+    config.tensorboard_path = os.path.join('report/tensorboard', config.project)
 
     module = import_module(project_path)
     project = module.Project(config)

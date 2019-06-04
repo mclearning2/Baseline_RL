@@ -52,6 +52,7 @@ class Gym(ABC):
 
         self.render_available = render_available
 
+        self.total_step = 0
         self.done = np.zeros(n_envs, dtype=bool)
         self.step_per_ep = np.zeros(n_envs, dtype=int)
         self.episodes = np.zeros(n_envs, dtype=int)
@@ -74,9 +75,11 @@ class Gym(ABC):
         else:
             assert np.shape(action) == (self.n_envs, self.action_size)
 
+        # step 이후에 reset하면 log를 기록할 수 없으므로 다음 step에서 reset
         self.step_per_ep[np.where(self.done)] = 0
         self.scores[np.where(self.done)] = 0
         self.episodes[np.where(self.done)] += 1
+        self.total_step += 1
 
         self.step_per_ep += 1
         if not self.is_discrete:
@@ -122,6 +125,7 @@ class Gym(ABC):
     def random_action(self):
         return self.env.random_action()
 
+    
     def is_first_env_done(self):
         return self.episodes[0] > self.max_episode
 

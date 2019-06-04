@@ -6,5 +6,5 @@ report
 *.pyc
 *.json
 *.jsonl
-venv
+RL_env
 test.py

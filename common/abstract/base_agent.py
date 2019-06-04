@@ -2,7 +2,12 @@ import wandb
 import numpy as np
 from abc import ABC, abstractmethod
 
+from torch.utils.tensorboard import SummaryWriter
+
 class BaseAgent(ABC):
+    def __init__(self, tensorboard_path):
+        self.writer = SummaryWriter(tensorboard_path)        
+
     @abstractmethod
     def select_action(self, state):
         pass
@@ -26,7 +31,7 @@ class BaseAgent(ABC):
 
             print(reward)
 
-    def write_log(self, **kargs):
+    def write_log(self, global_step: int, **kargs):
         """ Write print and logging.
 
         (e.g) 
@@ -50,6 +55,9 @@ class BaseAgent(ABC):
                 s += f"{name} : {value:.3f} | "
             else:
                 s += name + " : " + str(value)
+            self.writer.add_scalar(name, value, global_step)
+
         print(s)
     
         wandb.log(kargs)
+

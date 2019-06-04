@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from algorithms.utils.update import hard_update
-from common.envs.gym import Gym
+from common.abstract.base_env import Gym
 from common.abstract.base_project import BaseProject
 from common.models.mlp import MLP
 from algorithms.DDPG import DDPG
@@ -22,7 +22,7 @@ class Project(BaseProject):
             "critic_hidden_sizes": [8,8,8],
         }
 
-    def init_env(self, hyper_params, monitor_func):
+    def init_env(self, hyper_params, render_available, monitor_func):
         return Gym(
             env_id = 'Pendulum-v0', 
             n_envs = 1,
@@ -30,33 +30,34 @@ class Project(BaseProject):
             max_episode_steps = hyper_params['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
-            scale_action=True
+            scale_action=True,
+            render_available=render_available
         )
 
-    def init_model(self, input_size, output_size, device, hyper_params):
+    def init_model(self, state_size, action_size, device, hyper_params):
 
         actor = MLP(
-            input_size=input_size,
-            output_size=output_size,
+            input_size=state_size,
+            output_size=action_size,
             hidden_sizes=hyper_params['actor_hidden_sizes'],
             output_activation=nn.Tanh()
         ).to(device)        
 
         target_actor = MLP(
-            input_size=input_size,
-            output_size=output_size,
+            input_size=state_size,
+            output_size=action_size,
             hidden_sizes=hyper_params['actor_hidden_sizes'],
             output_activation=nn.Tanh()
         ).to(device)
 
         critic = MLP(
-            input_size=input_size + output_size,
+            input_size=state_size + action_size,
             output_size=1,
             hidden_sizes=hyper_params['critic_hidden_sizes'],
         ).to(device)        
 
         target_critic = MLP(
-            input_size=input_size + output_size,
+            input_size=state_size + action_size,
             output_size=1,
             hidden_sizes=hyper_params['critic_hidden_sizes'],
         ).to(device)
@@ -72,7 +73,8 @@ class Project(BaseProject):
                 "actor_optim": actor_optim, "critic_optim": critic_optim}
     
     
-    def init_agent(self, env, model, device, hyper_params):
+    def init_agent(self, env, model, device, hyper_params, tensorboard_path):
+
         return DDPG(
             env=env, 
             actor=model['actor'],  
@@ -82,5 +84,6 @@ class Project(BaseProject):
             actor_optim=model['actor_optim'],
             critic_optim=model['critic_optim'],
             device=device,
-            hyper_params=hyper_params
+            hyper_params=hyper_params,
+            tensorboard_path = tensorboard_path
         )

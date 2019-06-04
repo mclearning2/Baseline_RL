@@ -3,8 +3,6 @@
 
 OpenAI gym의 환경들을 이용해서 [Spinning up의 Key Papers in Deep RL](https://spinningup.openai.com/en/latest/spinningup/keypapers.html)에 나오는 논문들을 최대한 많이 구현해보는 것이 목표인 프로젝트입니다. 또한 최대한 한 알고리즘이 다양한 환경에 적용될 수 있도록 실험자를 위한 프레임워크를 구축하는 것 또한 목표입니다.
 
-이 프로젝트는 TensorboardX 대신 [wandb(Weights & Biases)](https://www.wandb.com/)를 사용합니다. 
-
 또한 OpenAI의 multiprocessing_env를 활용하여 학습하고 여러 개 렌더링을 동시에 할 수 있습니다.(`n_worker` 파라미터 활용)
 
 | BipedalWalker-v2 | CartPole-v0 | Pendulum-v0 |
@@ -17,8 +15,8 @@ OpenAI gym의 환경들을 이용해서 [Spinning up의 Key Papers in Deep RL](h
 
 ## System
 - Ubuntu 18.04
-- GTX 960 (CUDA 9.0, Pytorch 1.0)
 - Python 3.6.7
+- PyTorch 1.1.0
 
 ## Usage
 

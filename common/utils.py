@@ -1,4 +1,5 @@
 import os
+import glob
 import wandb
 import torch
 import shutil
@@ -36,7 +37,7 @@ def restore_hyper_params(hyperparams_path):
 
     return hyper_params
 
-def save_hyper_params(hyperparams_path):
+def save_hyper_params(hyper_params, hyperparams_path):
     check_path_and_make_dir(hyperparams_path)
 
     with open(hyperparams_path, 'wb+') as f:
@@ -64,8 +65,7 @@ def save_wandb(params_path, hyperparams_path, video_dir):
     files = glob(os.path.join(video_dir, "*.mp4"))
     for mp4_file in files:
         wandb.save(mp4_file)
-
-
+        
 def check_path_and_make_dir(path: str):
     dir_name = os.path.dirname(path)
     if not os.path.isdir(dir_name):

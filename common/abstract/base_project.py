@@ -233,7 +233,7 @@ class BaseProject(ABC):
             # Save 
             save_model_params(model, self.params_path)
             print("[INFO] Saved model parameters to " + self.hyperparams_path)
-            save_hyper_params(self.hyperparams_path)
+            save_hyper_params(hyper_params, self.hyperparams_path)
             print("[INFO] Saved hyperparameters to " + self.hyperparams_path)
             save_wandb(self.params_path, self.hyperparams_path, self.video_dir)
             print("[INFO] Saved all to cloud(wandb)")

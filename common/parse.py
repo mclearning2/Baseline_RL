@@ -32,6 +32,9 @@ def get_config() -> argparse.Namespace:
     parser.add_argument("-l", "--restore", dest="restore", action="store_true")
     parser.add_argument("-d", "--render", dest="render", action="store_true")
     parser.add_argument("-c", "--record", dest="record", action="store_true")
+    parser.add_argument("-f", "--tb_not_force", dest="record", action="store_true",
+                        help="해당 텐서보드 폴더가 있으면 지우지 않기."
+                             "default로 지움")
 
     parser.add_argument("--report_dir", type=str, default="report")
 
@@ -39,6 +42,7 @@ def get_config() -> argparse.Namespace:
     parser.set_defaults(restore=False)
     parser.set_defaults(render=False)
     parser.set_defaults(record=False)
+    parser.set_defaults(tb_not_force=False)
 
     config = parser.parse_args()
 

@@ -20,11 +20,8 @@ if __name__ == '__main__':
     config.hyperparams_path = os.path.join('report/model', config.project, 'hyperparams.pkl')
     config.tensorboard_path = os.path.join('report/tensorboard', config.project)
 
-    if os.path.isdir(config.tensorboard_path):
-        remove = input(f"{config.tensorboard_path} exists."
-                        "Do you want to remove that directory? [Y/n]")
-        if remove == "" or remove.lower() == 'y':
-            shutil.rmtree(config.tensorboard_path)
+    if not config.tb_not_force and os.path.isdir(config.tensorboard_path):
+        shutil.rmtree(config.tensorboard_path)
 
     module = import_module(project_path)
     project = module.Project(config)

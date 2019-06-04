@@ -13,7 +13,7 @@ class Project(BaseProject):
             "entropy_ratio": 0.001,
             "rollout_len": 5,
             
-            "n_workers": 4,
+            "n_workers": 8,
             "max_episode_steps": 0,
             "learning_rate": 0.005,
             "actor_hidden_sizes": [24],

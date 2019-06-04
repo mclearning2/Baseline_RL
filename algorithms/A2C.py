@@ -52,23 +52,29 @@ class A2C(BaseAgent):
     def compute_return(self, last_value: torch.Tensor) -> List[torch.Tensor]:
         gamma = self.hp['gamma']
 
-        R = last_value # []
-        returns: List[torch.Tensor] = []
-        for step in reversed(range(len(self.rewards))):
+        # self.rewards shape [rollout_len] with tensor [n_worker, 1]
+        # self.masks shape [rollout_len] with tensor [n_worker, 1]
+
+        R = last_value # [n_worker, 1]
+        returns = []
+        for step in reversed(range(len(self.rewards))): # [rollout_len, n_worker, 1]
             R = self.rewards[step] + gamma * R * self.masks[step]
             returns.insert(0, R)
             
+        assert np.shape(returns) == (self.hp['rollout_len'],)
+        
         return returns
     
     def train_model(self, last_state: torch.Tensor):
         last_state = torch.FloatTensor(last_state).to(self.device)
         _, last_value = self.model(last_state)
 
+        # returns shape [rollout_len] with tensor [n_worker, 1]
         returns = self.compute_return(last_value)
-        
-        returns = torch.cat(returns)
-        log_probs = torch.cat(self.log_probs)
-        values = torch.cat(self.values)
+
+        returns = torch.cat(returns).squeeze()
+        log_probs = torch.cat(self.log_probs).squeeze()
+        values = torch.cat(self.values).squeeze()
 
         advantage = returns - values
 

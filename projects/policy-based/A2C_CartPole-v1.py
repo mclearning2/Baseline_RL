@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.gym import Gym
+from common.envs.classic import Classic
 from common.abstract.base_project import BaseProject
 from common.models.mlp import CategoricalDist, MLP, SepActorCritic
 from algorithms.A2C import A2C
@@ -20,8 +20,8 @@ class Project(BaseProject):
             "critic_hidden_sizes": [24],
         }
 
-    def init_env(self, hyper_params, monitor_func):
-        return Gym(
+    def init_env(self, hyper_params, render_available, monitor_func):
+        return Classic(
             env_id = 'CartPole-v1', 
             n_envs = hyper_params['n_workers'],
             max_episode = 300,
@@ -30,15 +30,15 @@ class Project(BaseProject):
             recent_score_len=20,
         )
 
-    def init_model(self, input_size, output_size, device, hyper_params):
+    def init_model(self, state_size, action_size, device, hyper_params):
         actor = CategoricalDist(
-            input_size=input_size,
+            input_size=state_size,
             hidden_sizes=hyper_params['actor_hidden_sizes'],
-            output_size=output_size
+            output_size=action_size
         )
 
         critic = MLP(
-            input_size=input_size,
+            input_size=state_size,
             hidden_sizes=hyper_params['critic_hidden_sizes'],
             output_size=1
         )
@@ -49,5 +49,11 @@ class Project(BaseProject):
 
         return {'model': model, 'optim': optimizer}
 
-    def init_agent(self, env, model, device, hyper_params):
-        return A2C(env, model['model'], model['optim'], device, hyper_params)
+    def init_agent(self, env, model, device, hyper_params, tensorboard_path):
+        return A2C(
+            env = env, 
+            model = model['model'], 
+            optim = model['optim'], 
+            device = device, 
+            hyper_params = hyper_params,
+            tensorboard_path = tensorboard_path)

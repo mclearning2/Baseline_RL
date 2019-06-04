@@ -164,8 +164,6 @@ class CategoricalDist(MLP):
             output_activation=output_activation,
         )
 
-        self.apply(init_linear_weights_xavier)
-
     def forward(self, x):
         probs = super().forward(x)
         return Categorical(probs)
@@ -188,8 +186,6 @@ class NormalDist(MLP):
             output_activation=output_activation,
         )
         self.std = std
-
-        self.apply(init_linear_weights_xavier)
 
     def forward(self, x):
         mu = super().forward(x)

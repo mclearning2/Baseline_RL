@@ -4,6 +4,7 @@
 #               다양하게 쉽게 구현하기 위한 프로젝트
 
 import os
+import shutil
 
 from common.parse import get_config, select_project, import_module
 
@@ -18,6 +19,12 @@ if __name__ == '__main__':
     config.params_path = os.path.join('report/model', config.project, 'model.pt')
     config.hyperparams_path = os.path.join('report/model', config.project, 'hyperparams.pkl')
     config.tensorboard_path = os.path.join('report/tensorboard', config.project)
+
+    if os.path.isdir(config.tensorboard_path):
+        remove = input(f"{config.tensorboard_path} exists."
+                        "Do you want to remove that directory? [Y/n]")
+        if remove == "" or remove.lower() == 'y':
+            shutil.rmtree(config.tensorboard_path)
 
     module = import_module(project_path)
     project = module.Project(config)

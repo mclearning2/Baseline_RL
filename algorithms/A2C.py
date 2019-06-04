@@ -6,17 +6,20 @@ from typing import List
 from common.abstract.base_agent import BaseAgent
 
 class A2C(BaseAgent):
-    ''' Advantage Actor Critic
+    ''' Synchronous Advantage Actor Critic
 
     - Continuous, Discrete environments are available
     - A model must output [distribution, value]
-    - An optim must be used
-    - hyper_params in this agent
+    
+    Hyperparameters:
         gamma(float): discount factor
-        entropy_ratio(float): The ratio of entropy multiplied by the actor loss
-        rollout_len(int): The period of interaction and update
+        entropy_ratio(float): 탐험을 위해 entropy을 얼마나 쓸지 계수
+        rollout_len(int): 업데이트 주기 n-step
     '''
-    def __init__(self, env, model, optim, device, hyper_params):
+    def __init__(self, env, model, optim, device, hyper_params, tensorboard_path):
+
+        super().__init__(tensorboard_path)
+
         self.env = env
         self.device = device
         self.model = model
@@ -36,20 +39,20 @@ class A2C(BaseAgent):
     def select_action(self, state: np.ndarray) -> np.ndarray:
     
         state = torch.FloatTensor(state).to(self.device)
-        dist, value = self.model.forward(state)        
+        dist, value = self.model.forward(state)
         
         action = dist.sample()
 
         self.values.append(value)
         self.log_probs.append(dist.log_prob(action))
         self.entropy += dist.entropy().mean()
-        
+
         return action.cpu().numpy()
 
     def compute_return(self, last_value: torch.Tensor) -> List[torch.Tensor]:
         gamma = self.hp['gamma']
 
-        R = last_value        
+        R = last_value # []
         returns: List[torch.Tensor] = []
         for step in reversed(range(len(self.rewards))):
             R = self.rewards[step] + gamma * R * self.masks[step]
@@ -82,8 +85,9 @@ class A2C(BaseAgent):
     def train(self):
         state = self.env.reset()
 
-        while self.env.episodes[0] < self.env.max_episode + 1:
+        while not self.env.first_env_episode_done():
             for _ in range(self.hp['rollout_len']):
+
                 action = self.select_action(state)
 
                 next_state, reward, done, info = self.env.step(action)
@@ -97,9 +101,10 @@ class A2C(BaseAgent):
 
                 if done[0]:
                     self.write_log(
-                        episode=self.env.episodes[0],
+                        global_step=self.env.episodes[0],
+                        episode= self.env.episodes[0],
                         score=self.env.scores[0],
-                        steps=self.env.steps[0],
+                        steps=self.env.step_per_ep[0],
                         recent_scores=np.mean(self.env.recent_scores)
                     )
 

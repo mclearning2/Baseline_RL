@@ -1,5 +1,8 @@
 absl-py==0.7.1
 argh==0.26.2
+atari-py==0.1.15
+Box2D==2.3.2
+Box2D-kengz==2.3.3
 certifi==2019.3.9
 chardet==3.0.4
 Click==7.0

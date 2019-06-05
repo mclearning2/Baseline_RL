@@ -24,10 +24,11 @@ class Project(BaseProject):
         return Classic(
             env_id = 'CartPole-v1', 
             n_envs = hyper_params['n_workers'],
-            max_episode = 300,
+            max_episode = 80,
             max_episode_steps = hyper_params['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
+            render_available=render_available
         )
 
     def init_model(self, state_size, action_size, device, hyper_params):

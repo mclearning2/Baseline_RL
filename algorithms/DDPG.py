@@ -1,22 +1,18 @@
-import gym
 import torch
 import numpy as np
 from typing import List, Union, Dict
 from common.abstract.base_agent import BaseAgent
 
-from algorithms.utils.update import soft_update
+from algorithms.utils.update import soft_update, hard_update
 from algorithms.utils.buffer import ReplayMemory
 from algorithms.utils.noise import OUNoise
 
 class DDPG(BaseAgent):
     ''' Deep Deterministic Policy Gradient
     
-    - The only continuous environment is available
-    - The input of critic is the output of actor. So critic can't be CNN
-    - The action noise is used Ornstein–Uhlenbeck process
-    - Train model [actor, critic],
-      Target model [target_actor, target_critic]
-      Optimizer [actor_optim, critic_optim]
+    - Only continuous action space
+    - Action noise : Ornstein–Uhlenbeck process
+
     - hyper_params in this agent
         gamma(float): discount_factor
         tau(float): The ratio of target model for soft update
@@ -37,18 +33,22 @@ class DDPG(BaseAgent):
 
         self.env = env
         self.device = device
+
         self.actor = actor
         self.critic = critic
         self.target_actor = target_actor
         self.target_critic = target_critic
+
         self.actor_optim = actor_optim
         self.critic_optim = critic_optim
         
-        # Hyperparameters
         self.hp = hyper_params
 
         self.memory = ReplayMemory(self.hp['memory_size'])
         self.noise = OUNoise(self.env.action_size)        
+
+        hard_update(actor, target_actor)
+        hard_update(critic, target_critic)
         
     def select_action(self, state: np.ndarray) -> np.ndarray:
         state = torch.FloatTensor(state).to(self.device)
@@ -62,7 +62,8 @@ class DDPG(BaseAgent):
         tau = self.hp['tau']
         gamma = self.hp['gamma']
 
-        states, actions, rewards, next_states, dones = self.memory.sample(batch_size)
+        states, actions, rewards, next_states, dones = \
+            self.memory.sample(batch_size)
 
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.FloatTensor(actions).to(self.device)

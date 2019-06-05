@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from algorithms.utils.update import hard_update
-from common.abstract.base_env import Gym
+from common.envs.classic import Classic
 from common.abstract.base_project import BaseProject
 from common.models.mlp import MLP
 from algorithms.DDPG import DDPG
@@ -65,8 +65,6 @@ class Project(BaseProject):
         actor_optim = optim.Adam(actor.parameters(), hyper_params['actor_lr'])
         critic_optim = optim.Adam(critic.parameters(), hyper_params['critic_lr'])
 
-        hard_update(actor, target_actor)
-        hard_update(critic, target_critic)
 
         return {"actor": actor, "critic": critic, \
                 "target_actor": target_actor, "target_critic": target_critic, \

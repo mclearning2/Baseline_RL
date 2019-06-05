@@ -1,14 +1,15 @@
-import numpy as np
 import torch
+import numpy as np
 import torch.nn as nn
 from typing import List
 
 from common.abstract.base_agent import BaseAgent
-
+from common.abstract.base_env import Gym
+ 
 class A2C(BaseAgent):
     ''' Synchronous Advantage Actor Critic
 
-    - Continuous, Discrete environments are available
+    - continuous, discrete action space
     - A model must output [distribution, value]
     
     Hyperparameters:
@@ -16,12 +17,20 @@ class A2C(BaseAgent):
         entropy_ratio(float): 탐험을 위해 entropy을 얼마나 쓸지 계수
         rollout_len(int): 업데이트 주기 n-step
     '''
-    def __init__(self, env, model, optim, device, hyper_params, tensorboard_path):
+    def __init__(self, 
+        env: Gym,
+        model: nn.Module,
+        optim: torch.optim, 
+        device: str, 
+        hyper_params: dict, 
+        tensorboard_path: str
+    ):
 
         super().__init__(tensorboard_path)
 
         self.env = env
         self.device = device
+        
         self.model = model
         self.optim = optim
 
@@ -50,18 +59,11 @@ class A2C(BaseAgent):
         return action.cpu().numpy()
 
     def compute_return(self, last_value: torch.Tensor) -> List[torch.Tensor]:
-        gamma = self.hp['gamma']
-
-        # self.rewards shape [rollout_len] with tensor [n_worker, 1]
-        # self.masks shape [rollout_len] with tensor [n_worker, 1]
-
-        R = last_value # [n_worker, 1]
+        R = last_value
         returns = []
         for step in reversed(range(len(self.rewards))): # [rollout_len, n_worker, 1]
-            R = self.rewards[step] + gamma * R * self.masks[step]
+            R = self.rewards[step] + self.hp['gamma'] * R * self.masks[step]
             returns.insert(0, R)
-            
-        assert np.shape(returns) == (self.hp['rollout_len'],)
         
         return returns
     
@@ -73,7 +75,7 @@ class A2C(BaseAgent):
         returns = self.compute_return(last_value)
 
         returns = torch.cat(returns).squeeze()
-        log_probs = torch.cat(self.log_probs).squeeze()
+        log_probs = torch.cat(self.log_probs)
         values = torch.cat(self.values).squeeze()
 
         advantage = returns - values

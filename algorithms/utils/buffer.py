@@ -24,7 +24,7 @@ class ReplayMemory():
     def save(self, *args):
         ''' 여러 개를 동시에 저장할 수 있다. 
             Multiprocessing에 의해 여러 개가 동시에 들어오더라도 그에 맞춰
-            반복(for)해서 넣어준다. 하지만 n_worker가 1 이상이여야하기 때문에
+            반복(for)해서 넣어준다.
             반드시 shape는 [n_worker, *data_shape] 여야 한다.
 
         Examples:
@@ -40,28 +40,27 @@ class ReplayMemory():
                     [0.        , 0.        , 0.        , 0.        ],
                     [0.        , 0.        , 0.        , 0.        ]])]
         '''
-
         # n_worker : the number of multiprocessing
         n_worker = np.shape(args[0])[0]
 
-        # if memory is empty
-        if self._cur_size == 0:
-            # save arguments
+        for arg in args:
+            assert np.shape(arg)[0] == n_worker, \
+                   f"save할 데이터의 n_worker는 {n_worker}여야 합니다." \
+                   f"하지만 {np.shape(arg)[0]} 입니다."
+            
+            assert np.ndim(arg) > 1, "shape는 [n_worker, *data_shape] 여야 합니다."
+
+        # 메모리 리스트가 비어있을 경우(초기)
+        # 해당 데이터 저장을 위한 array 생성 후 리스트에 추가
+        if self._cur_size == 0:            
             for arg in args:
-                # [memory size, The shape of argument without n_worker]
+                arg_shape = np.shape(arg)[1:]
+                arg_memory_size = [self._max_size] + list(arg_shape)
 
-                arg_shape = list(np.shape(arg))[1:] 
-                
-                if arg_shape == []:
-                    arg_shape = [1]
-
-                arg_memory_size = [self._max_size] + arg_shape
-
-                # Generate memory(numpy) with zeros
                 self._memory.append(np.zeros(arg_memory_size, dtype=arg.dtype))
-
-        # 
+        
         for arg_index, arg in enumerate(args):
+            self._memory[arg_index][self._index]
             for n in range(n_worker):
                 mem_index = (self._index + n) % self._max_size
                 self._memory[arg_index][mem_index] = arg[n]
@@ -78,7 +77,6 @@ class ReplayMemory():
             sampled_memory.append(values[rand_indexes])
 
         return sampled_memory
-
 
 class PrioritizedReplayMemory(ReplayMemory):
     def __init__(self, capacity, prob_alpha=0.6):

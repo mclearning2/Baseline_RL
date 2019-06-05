@@ -22,14 +22,17 @@ class BaseAgent(ABC):
 
     def test(self):
         state = self.env.reset()
-        while not self.env.is_episode_done():
+        while not self.env.first_env_episode_done():
+            self.env.render()
+
             action = self.select_action(state)
 
             next_state, reward, done, _ = self.env.step(action)
 
             state = next_state
 
-            print(reward)
+            if done[0]:
+                print("score :", self.env.scores[0])
 
     def write_log(self, global_step: int, **kargs):
         """ Write print and logging.

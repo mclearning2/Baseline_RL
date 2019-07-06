@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.classic import Classic
+from environments.gym import Gym
 from common.abstract.base_project import BaseProject
-from common.models.mlp import CategoricalDist, MLP, SepActorCritic
+from algorithms.models.mlp import CategoricalDist, MLP, SepActorCritic
 from algorithms.A2C import A2C
 
 class Project(BaseProject):

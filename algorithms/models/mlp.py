@@ -15,7 +15,7 @@ class MLP(nn.Module):
         input_size: int,
         hidden_sizes: list,
         output_size: int = 0,
-        hidden_activation: Callable = nn.ReLU(),
+        hidden_activation=nn.ReLU(),
         output_activation: Callable = nn.Sequential(), # identity
     ):
         """Initialization with xavier

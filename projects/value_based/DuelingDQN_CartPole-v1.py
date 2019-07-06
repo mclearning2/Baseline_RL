@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.atari import Atari
+from gym.gym import Gym
 from common.abstract.base_project import BaseProject
-from common.models.cnn import CNN
+from algorithms.models.mlp import DuelingMLP
 from algorithms.DQN import DQN
 
 class Project(BaseProject):
@@ -11,44 +11,37 @@ class Project(BaseProject):
         return {
             "eps_start": 1.0,
             "eps_end": 0.1,
-            "eps_decay_steps": 1000000,
-            "target_update_period": 10000,
-            "memory_size": 400000,
-            "start_learning_step": 50000,
-            "batch_size": 32,
+            "eps_decay_steps": 5000,
+            "n_worker": 8,
+            "target_update_period": 600,
+            "memory_size": 20000,
+            "start_learning_step": 1000,
+            "batch_size": 64,
             "discount_factor": 0.99,
-            "learning_rate": 0.00025,
+            "learning_rate": 0.001,
             "max_episode_steps": 0,
-            "n_history": 4,
-            "img_width": 80,
-            "img_height": 80
+            "hidden_size": [256],
+            "advantage_hidden_size": [128],
+            "value_hidden_size": [128],
         }
 
     def init_env(self, hyper_params, monitor_func):
-        return Atari(
-            env_id = 'BreakoutDeterministic-v4',
-            max_episode = 10000,
-            max_episode_steps = hyper_params['max_episode_steps'],
-            monitor_func = monitor_func(lambda x: x % 50 == 0 and x > 50000),
-            recent_score_len = 100,
-            n_history= hyper_params['n_history'],
-            width=hyper_params['img_width'],
-            height=hyper_params['img_height']
+        return Gym(
+            env_id='CartPole-v1',
+            n_envs=hyper_params['n_worker'],
+            max_episode=500,
+            max_episode_steps=hyper_params['max_episode_steps'],
+            monitor_func=monitor_func(lambda x: x % 50 == 0),
+            recent_score_len=20,
         )
 
     def init_model(self, input_size, output_size, device, hyper_params):
-
         def modeling():
-            return CNN(
+            return  DuelingMLP(
                 input_size=input_size,
-                output_size=output_size,
-                conv_layers= [
-                    nn.Conv2d(input_size[0], 32, 8, 4),
-                    nn.Conv2d(32, 64, 4, 2),
-                    nn.Conv2d(64, 64, 3, 1),
-                ],
-                hidden_sizes= [512],
-                hidden_activation=nn.ReLU(),
+                hidden_sizes=hyper_params["hidden_size"],
+                output_sizes1=hyper_params['advantage_hidden_size'] + [output_size],
+                output_sizes2=hyper_params['value_hidden_size'] + [1],
             ).to(device)
 
         online_net = modeling()

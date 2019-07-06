@@ -3,11 +3,11 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.gym import Gym
+from gym.gym import Gym
 from common.abstract.base_project import BaseProject
 from algorithms.utils.update import hard_update
 
-from common.models.mlp import MLP
+from algorithms.models.mlp import MLP
 from algorithms.TD3 import TD3
 
 class Project(BaseProject):

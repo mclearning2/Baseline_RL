@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.gym import Gym
+from gym.gym import Gym
 from common.abstract.base_project import BaseProject
-from common.models.mlp import DuelingMLP
+from algorithms.models.mlp import MLP
 from algorithms.DQN import DQN
 
 class Project(BaseProject):
@@ -20,9 +20,7 @@ class Project(BaseProject):
             "discount_factor": 0.99,
             "learning_rate": 0.001,
             "max_episode_steps": 0,
-            "hidden_size": [256],
-            "advantage_hidden_size": [128],
-            "value_hidden_size": [128],
+            "hidden_size": [256, 256],      
         }
 
     def init_env(self, hyper_params, monitor_func):
@@ -37,11 +35,10 @@ class Project(BaseProject):
 
     def init_model(self, input_size, output_size, device, hyper_params):
         def modeling():
-            return  DuelingMLP(
+            return MLP(
                 input_size=input_size,
-                hidden_sizes=hyper_params["hidden_size"],
-                output_sizes1=hyper_params['advantage_hidden_size'] + [output_size],
-                output_sizes2=hyper_params['value_hidden_size'] + [1],
+                output_size=output_size,
+                hidden_sizes=hyper_params['hidden_size'],
             ).to(device)
 
         online_net = modeling()

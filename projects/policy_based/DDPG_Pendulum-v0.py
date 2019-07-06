@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch.optim as optim
 
 from algorithms.utils.update import hard_update
-from common.envs.classic import Classic
+from gym_env.classic import Classic
 from common.abstract.base_project import BaseProject
-from common.models.mlp import MLP
+from algorithms.models.mlp import MLP
 from algorithms.DDPG import DDPG
 
 class Project(BaseProject):

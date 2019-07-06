@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from common.envs.gym import Gym
+from gym.gym import Gym
 from common.abstract.base_project import BaseProject
-from common.models.mlp import MLP
+from algorithms.models.mlp import MLP
 from algorithms.DQN import DQN
 
 class Project(BaseProject):

@@ -9,14 +9,6 @@ class BaseAgent(ABC):
         self.writer = SummaryWriter(tensorboard_path)        
 
     @abstractmethod
-    def select_action(self, state):
-        pass
-
-    @abstractmethod
-    def train_model(self):
-        pass
-
-    @abstractmethod
     def train(self):
         pass
 

@@ -1,3 +1,4 @@
+import os
 import wandb
 import torch
 import random
@@ -16,6 +17,15 @@ from common.utils import restore_model_params, save_model_params
 class BaseProject(ABC):
     def __init__(self, config: argparse.Namespace):
         self.__config = config
+
+        self.video_dir = os.path.join('report/videos', config.project)
+        self.params_path = os.path.join('report/model', config.project,
+                                            'model.pt')
+        self.hyperparams_path = os.path.join('report/model', config.project,
+                                                'hyperparams.pkl')
+        self.tensorboard_path = os.path.join('report/tensorboard',
+                                                config.project)
+
         self.device = torch.device("cuda:0" if torch.cuda.is_available() 
                                    else "cpu")
 

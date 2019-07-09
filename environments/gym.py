@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 from common.abstract.base_env import MultipleEnv
 
 class Gym:

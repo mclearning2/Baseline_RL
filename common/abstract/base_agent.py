@@ -1,5 +1,6 @@
 import wandb
 import numpy as np
+from common.logger import logger
 from abc import ABC, abstractmethod
 
 from torch.utils.tensorboard import SummaryWriter
@@ -24,35 +25,33 @@ class BaseAgent(ABC):
             state = next_state
 
             if done[0]:
-                print("score :", self.env.scores[0])
+                logger.info("score :", self.env.scores[0])
 
     def write_log(self, global_step: int, **kargs):
         """ Write print and logging.
+        >>> score_value = 10.5
+        >>> step_value = 3
+        >>> episode = 5
+        >>> write_log(
+                score = score_value, 
+                step = step_value, 
+                episode = episode_value
+            )
 
-        (e.g) 
-        score_value = 10.5
-        step_value = 3
-        episode = 5
-
-        write_log(
-            score = score_value, 
-            step = step_value, 
-            episode = episode_value
-        )
-        >>> score : 10.5 | step : 3 | episode : 5 |
+        score : 10.500 | step : 3 | episode : 5 |
 
         """
         s = ""
         for name, value in kargs.items():
             if isinstance(value, (int, np.integer)):
-                s += f"{name} : {value} | "
+                s += f"{name} : {value}, "
             elif isinstance(value, (float, np.float)):
-                s += f"{name} : {value:.3f} | "
+                s += f"{name} : {value:.3f}, "
             else:
                 s += name + " : " + str(value)
             self.writer.add_scalar(name, value, global_step)
 
-        print(s)
+        logger.info(s)
     
         wandb.log(kargs)
 

@@ -7,7 +7,7 @@ from algorithms.models.mlp import CategoricalDist, MLP, SepActorCritic
 from algorithms.A2C import A2C
 
 class Project(BaseProject):
-    def init_hyper_params(self):
+    def init_hyperparams(self):
         return {
             "gamma": 0.99,
             "entropy_ratio": 0.001,
@@ -20,41 +20,42 @@ class Project(BaseProject):
             "critic_hidden_sizes": [24],
         }
 
-    def init_env(self, hyper_params, render_available, monitor_func):
-        return Classic(
+    def init_env(self, hyperparams):
+        return Gym(
             env_id = 'CartPole-v1', 
-            n_envs = hyper_params['n_workers'],
-            max_episode = 80,
-            max_episode_steps = hyper_params['max_episode_steps'],
-            monitor_func = monitor_func(lambda x: x % 50 == 0),
+            n_envs = hyperparams['n_workers'],
+            max_episode = 100,
+            max_episode_steps = hyperparams['max_episode_steps'],
+            monitor_func = self.monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
-            render_available=render_available
+            render_available=self.is_render
         )
 
-    def init_model(self, state_size, action_size, device, hyper_params):
+    def init_model(self, env, hyperparams):
         actor = CategoricalDist(
-            input_size=state_size,
-            hidden_sizes=hyper_params['actor_hidden_sizes'],
-            output_size=action_size
+            input_size=env.state_size,
+            hidden_sizes=hyperparams['actor_hidden_sizes'],
+            output_size=env.action_size
         )
 
         critic = MLP(
-            input_size=state_size,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            input_size=env.state_size,
+            hidden_sizes=hyperparams['critic_hidden_sizes'],
             output_size=1
         )
 
-        model = SepActorCritic(actor, critic).to(device)
+        model = SepActorCritic(actor, critic).to(self.device)
 
-        optimizer = optim.Adam(model.parameters(), hyper_params['learning_rate'])
+        optimizer = optim.Adam(model.parameters(), \
+                               hyperparams['learning_rate'])
 
         return {'model': model, 'optim': optimizer}
 
-    def init_agent(self, env, model, device, hyper_params, tensorboard_path):
+    def init_agent(self, env, model, device, hyperparams, tensorboard_path):
         return A2C(
             env = env, 
             model = model['model'], 
             optim = model['optim'], 
             device = device, 
-            hyper_params = hyper_params,
+            hyperparams = hyperparams,
             tensorboard_path = tensorboard_path)

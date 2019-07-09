@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from typing import Callable
 
-from gym.gym import Gym
+from environments.gym import Gym
 
 def cvt_gray_resize_half(frame, height = 84, width = 84):
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)

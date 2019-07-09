@@ -11,7 +11,7 @@ from algorithms.models.mlp import MLP
 from algorithms.TD3 import TD3
 
 class Project(BaseProject):
-    def init_hyper_params(self):
+    def init_hyperparams(self):
         return {
             "gamma": 0.99,
             "tau": 0.99,
@@ -30,58 +30,58 @@ class Project(BaseProject):
             "critic_hidden_sizes": [110, 110]
         }
 
-    def init_env(self, hyper_params, monitor_func):
+    def init_env(self, hyperparams, monitor_func):
         return Gym(
             env_id = 'Pendulum-v0', 
             n_envs = 1,
             max_episode = 500,
-            max_episode_steps = hyper_params['max_episode_steps'],
+            max_episode_steps = hyperparams['max_episode_steps'],
             monitor_func = monitor_func(lambda x: x % 50 == 0),
             scale_action = True,
         )
 
-    def init_model(self, input_size, output_size, device, hyper_params):
+    def init_model(self, input_size, output_size, device, hyperparams):
         actor = MLP(
             input_size=input_size,
             output_size=output_size,
-            hidden_sizes=hyper_params['actor_hidden_sizes'],
+            hidden_sizes=hyperparams['actor_hidden_sizes'],
             output_activation=nn.Tanh()
         ).to(self.device)
 
         target_actor = MLP(
             input_size=input_size,
             output_size=output_size,
-            hidden_sizes=hyper_params['actor_hidden_sizes'],
+            hidden_sizes=hyperparams['actor_hidden_sizes'],
             output_activation=nn.Tanh()
         ).to(self.device)
 
         critic1 = MLP(
             input_size=input_size + output_size,
             output_size=1,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
         critic2 = MLP(
             input_size=input_size + output_size,
             output_size=1,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
         target_critic1 = MLP(
             input_size=input_size + output_size,
             output_size=1,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
         target_critic2 = MLP(
             input_size=input_size + output_size,
             output_size=1,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
-        actor_optim = optim.Adam(actor.parameters(), hyper_params['actor_lr'])
-        critic_optim1 = optim.Adam(critic1.parameters(), hyper_params['critic_lr'])
-        critic_optim2 = optim.Adam(critic2.parameters(), hyper_params['critic_lr'])
+        actor_optim = optim.Adam(actor.parameters(), hyperparams['actor_lr'])
+        critic_optim1 = optim.Adam(critic1.parameters(), hyperparams['critic_lr'])
+        critic_optim2 = optim.Adam(critic2.parameters(), hyperparams['critic_lr'])
 
         hard_update(actor, target_actor)
         hard_update(critic1, target_critic1)
@@ -93,7 +93,7 @@ class Project(BaseProject):
                 "actor_optim": actor_optim, \
                 "critic_optim1": critic_optim1, "critic_optim2": critic_optim2}
     
-    def init_agent(self, env, models, device, hyper_params):
+    def init_agent(self, env, models, device, hyperparams):
         return TD3(
             env=env, 
             actor=models['actor'], 
@@ -106,5 +106,5 @@ class Project(BaseProject):
             critic_optim1=models['critic_optim1'], 
             critic_optim2=models['critic_optim2'],
             device=device, 
-            hyper_params=hyper_params
+            hyperparams=hyperparams
         )

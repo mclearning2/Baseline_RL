@@ -1,10 +1,12 @@
 import os
-import glob
 import wandb
 import torch
 import shutil
 import pickle
 import numpy as np
+from glob import glob
+
+from common.logger import logger
 
 def restore_wandb(
     user_name: str,
@@ -28,20 +30,20 @@ def restore_wandb(
             replace=True,
             root=root)
 
-def restore_hyper_params(hyperparams_path):
+def restore_hyperparams(hyperparams_path):
     ''' pickle 형식(.pkl)으로 저장했던 hyperparameter를 다시 불러온다. '''
 
     with open(hyperparams_path, 'rb') as f:
         unpickler = pickle.Unpickler(f)
-        hyper_params = unpickler.load()
+        hyperparams = unpickler.load()
 
-    return hyper_params
+    return hyperparams
 
-def save_hyper_params(hyper_params, hyperparams_path):
+def save_hyperparams(hyperparams, hyperparams_path):
     check_path_and_make_dir(hyperparams_path)
 
     with open(hyperparams_path, 'wb+') as f:
-        pickle.dump(hyper_params, f)
+        pickle.dump(hyperparams, f)
 
 def restore_model_params(model, params_path):
     params = torch.load(params_path)
@@ -57,7 +59,7 @@ def save_model_params(model, params_path):
 
     torch.save(params, params_path)
 
-    print("[INFO] Saved model and optimizer to " + params_path)
+    logger.info("Saved model and optimizer to " + params_path)
 
 def save_wandb(params_path, hyperparams_path, video_dir):
     wandb.save(params_path)

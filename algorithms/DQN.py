@@ -8,7 +8,7 @@ from algorithms.utils.buffer import ReplayMemory, PrioritizedReplayMemory
 from algorithms.utils.update import hard_update
 
 class DQN(BaseAgent):
-    def __init__(self, env, online_net, target_net, optim, device, hyper_params):
+    def __init__(self, env, online_net, target_net, optim, device, hyperparams):
         self.env = env
         self.device = device
         self.optim = optim
@@ -16,7 +16,7 @@ class DQN(BaseAgent):
         self.online_net = online_net
         self.target_net = target_net            
 
-        self.hp = hyper_params
+        self.hp = hyperparams
         
         self.epsilon = self.hp['eps_start']
         self.eps_decay = (self.hp['eps_start'] - self.hp['eps_end']) \

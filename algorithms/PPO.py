@@ -9,7 +9,7 @@ class PPO(BaseAgent):
     - Continuous, Discrete environments are available
     - A model must output [distribution, value]
     - An optim must be used
-    - hyper_params in this agent
+    - hyperparams in this agent
         gamma(float): Discount factor
         tau(float): Lambda in GAE
         epsilon(float): Clip bound of surrogate loss (1-epsilon, 1+epsilon)
@@ -18,13 +18,13 @@ class PPO(BaseAgent):
         batch_size(int): The batch size of training
         epoch(int): The number of ppo update epoch
     '''
-    def __init__(self, env, model, optim, device, hyper_params):
+    def __init__(self, env, model, optim, device, hyperparams):
         self.env = env
         self.device = device
         self.model = model
         self.optim = optim
 
-        self.hp = hyper_params
+        self.hp = hyperparams
         
         self.memory_reset()
 

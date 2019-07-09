@@ -4,50 +4,64 @@ import torch
 import random
 import argparse
 import numpy as np
-from typing import Union, Callable, Dict
+from pyfiglet import Figlet
+from datetime import datetime
+from common.logger import logger
+from typing import Union, Callable, Dict, Type
 from gym.wrappers import Monitor
 from abc import ABC, abstractmethod
 
-from env.atari import Atari
-from env.classic import Classic
+from environments.atari import Atari
+from environments.gym import Gym
 from common.utils import restore_wandb, save_wandb
-from common.utils import restore_hyper_params, save_hyper_params
+from common.utils import restore_hyperparams, save_hyperparams
 from common.utils import restore_model_params, save_model_params
 
+
 class BaseProject(ABC):
+    '''
+
+    '''
+
     def __init__(self, config: argparse.Namespace):
-        self.__config = config
+        ''' Args
+        '''
+        self._config = config
 
-        self.video_dir = os.path.join('report/videos', config.project)
-        self.params_path = os.path.join('report/model', config.project,
-                                            'model.pt')
-        self.hyperparams_path = os.path.join('report/model', config.project,
-                                                'hyperparams.pkl')
-        self.tensorboard_path = os.path.join('report/tensorboard',
-                                                config.project)
+        reports_dir = config.reports_dir
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() 
+        current_time = str(datetime.now().strftime("%y%m%d_%H%M%S"))
+
+        self.video_path = os.path.join(reports_dir, 'videos', config.project)
+        self.params_path = os.path.join(reports_dir, 'model', config.project,
+                                        'model.pt')
+        self.hyperparams_path = os.path.join(reports_dir, 'model',
+                                             config.project, 'hyperparams.pkl')
+        self.tensorboard_path = os.path.join(reports_dir, 'tensorboard',
+                                             config.project, current_time)
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available()
                                    else "cpu")
 
     @abstractmethod
-    def init_hyper_params(self) -> dict:
+    def init_hyperparams(self) -> dict:
         ''' train/test 할 때 사용될 하이퍼파라미터들을 딕셔너리로 반환
 
-            만약 self.restore == True일 경우, 여기서 반환한 값이 아닌
-            config.user_name, config.project, config.run_id를 통해 wandb에서 불러온
-            하이퍼파라미터를 사용한다.
+        if self._config.restore == True:
+            restored hyperparameter will be used
+        else:
+            hyperparameter here will be used
 
         Example:
-            return { "gamma": 0.99,
-                     "epsilon": 0.1 }
+            return { "gamma": 0.99, "epsilon": 0.1 }
         '''
 
     @abstractmethod
-    def init_env(self, hyper_params: dict) -> Union[Atari, Classic]:
-        ''' `envs/ 에 있는 클래스 중 객체 하나를 만들어서 반환.
+    def init_env(self, hyperparams: dict) -> Union[Atari, Gym]:
+        ''' `environments/ 에 있는 클래스 중 객체 하나를 만들어서 반환.
 
         Args:
-            hyper_params: self.init_hyper_params()에서 구현한 딕셔너리
+            hyperparams: self.init_hyperparams()에서 반환한 딕셔너리
 
         Examples:
             return Atari(env_id = 'Breakout-v4',
@@ -55,24 +69,21 @@ class BaseProject(ABC):
                          monitor_func = self.env_monitor(
                                             lambda iter: iter % 50
                                         )
-                         )
+                        )
         '''
 
     @abstractmethod
     def init_model(
         self,
-        state_size: Union[list, int],
-        action_size: int,
-        device: str,
-        hyper_params: dict
-    ) -> Dict[str, Union[torch.nn.Module, torch.optim.Optimizer]]:
+        env: Union[Atari, Gym],
+        hyperparams: dict
+    ) -> Dict[str, Union[Type[torch.nn.Module], Type[torch.optim.Optimizer]]]:
         ''' 모델과 옵티마이저를 구현하고 반환
 
         Args:
-            state_size: model의 입력으로 사용되는 환경 상태 크기
-            action_size: model의 출력으로 사용되는 환경 행동 수
-            device: self.device
-            hyper_params: self.init_hyper_params()에서 구현한 딕셔너리        
+            env: init_env() 함수에서 반환한 환경 클래스
+            hyperparams: self.init_hyperparams()에서 구현한 딕셔너리
+
         Examples:
             model = MLP(...)
             optimizer = optim.Adam(...)
@@ -83,11 +94,9 @@ class BaseProject(ABC):
     @abstractmethod
     def init_agent(
         self,
-        env,
+        env: Union[Atari, Gym],
         model: dict,
-        device: str,
-        hyper_params: dict,
-        tensorboard_path: str,
+        hyperparams: dict,
     ):
         ''' algorithms/ 안의 에이전트 구현 후 반환
 
@@ -95,37 +104,46 @@ class BaseProject(ABC):
             env: self.init_env()에서 구현한 환경
             model: self.init_model()에서 구현한 모델
             device: PyTorch cuda or cpu
-            hyper_params: self.init_hyper_params()에서 구현한 하이퍼파라미터
+            hyperparams: self.init_hyperparams()에서 구현한 하이퍼파라미터
             tensorboard_path: 텐서보드를 저장할 경로
 
         Examples:
             return A2C(...)
         '''
 
+    @property
     def is_render(self):
-        return self.__config.render
+        return self._config.render
 
+    @property
     def is_test(self):
-        return self.__config.test
+        return self._config.test
 
+    @property
     def is_restore(self):
-        return self.__config.restore
+        return True if self._config.restore else False
 
+    @property
     def is_record(self):
-        return self.__config.record
+        return self._config.record
 
-    def get_video_dir(self):
-        return self.__config.video_dir
-
-    def monitor_func(self, video_callable=None, *args, **kargs):
-        ''' init_env의 argument에 들어가는 함수. '''
+    def monitor_func(
+            self,
+            video_callable: Callable,
+            force: bool = True,
+            *args,
+            **kargs):
+        ''' init_env를 할 때 record를 하고 싶은 경우 이 monitor_func를 환경에 전달한다.
+            video_callable은 gym.wrappers.Monitor의 파라미터이다. 
+            그 외의 값들도 전달 가능.
+        '''
         def _func(env):
-            if self.__config.record:
-                print("[INFO] Video(mp4) will be saved in here:")
-                print(" > " + self.video_dir)
+            if self.is_record:
+                logger.info("Video(mp4) will be saved in here > " 
+                            + self.video_path)
                 return Monitor(
                     env=env,
-                    directory=self.video_dir,
+                    directory=self.video_path,
                     video_callable=video_callable,
                     force=True,
                     *args,
@@ -137,101 +155,99 @@ class BaseProject(ABC):
         return _func
 
     def run(self):
-        # Restore from cloud 
+        # Restore files from wandb
         # ======================================================================
-        if self.run_id:
+        if self._config.restore:
+            user_name, project, run_id = self._config.restore.split('/')
             restore_wandb(
-                user_name=self.user_name,
-                project=self.project,
-                run_id=self.run_id,
+                user_name=user_name,
+                project=project,
+                run_id=run_id,
                 params_path=self.params_path,
                 hyperparams_path=self.hyperparams_path
-                )
-            print(f"[INFO] Loaded from {self.run_id} in wandb cloud")
+            )
+            logger.info("Loaded from {self.run_id} in wandb cloud")
         # ======================================================================
 
         # Hyper parameters
         # ======================================================================
-        if self.restore:
-            hyper_params = restore_hyper_params(self.hyperparams_path)
-            print("[INFO] Loaded hyperparameters from " +
-                  self.hyperparams_path)
+        if self._config.restore:
+            hyperparams = restore_hyperparams(self.hyperparams_path)
+            logger.info("Loaded hyperparameters from " +
+                        self.hyperparams_path)
         else:
-            hyper_params = self.init_hyper_params()
-            print("[INFO] Initialized hyperparameters")
+            hyperparams = self.init_hyperparams()
+            logger.info("Initialized hyperparameters")
         # ======================================================================
 
         # Environment
         # ======================================================================
-        env = self.init_env(hyper_params, self.render, self.monitor_func)
-        print(f"[INFO] Initialized environment")
+        env = self.init_env(hyperparams)
+        logger.info("Initialized environment")
         # ======================================================================
 
         # Seed
         # ======================================================================
-        env.seed(self.seed)
-        torch.manual_seed(self.seed)
-        np.random.seed(self.seed)
-        random.seed(self.seed)
-        print(f"[INFO] Seeds are set by {self.seed}")
+        env.seed(self._config.seed)
+        torch.manual_seed(self._config.seed)
+        np.random.seed(self._config.seed)
+        random.seed(self._config.seed)
+        logger.info(f"Seeds are set by {self._config.seed}")
         # ======================================================================
 
         # Model
         # ======================================================================
-        model = self.init_model(
-            state_size=env.state_size,
-            action_size=env.action_size,
-            device=self.device,
-            hyper_params=hyper_params
-        )
-        
-        if self.restore:
+        model = self.init_model(env, hyperparams)
+
+        if self.is_restore:
             restore_model_params(model, self.params_path)
-            print("[INFO] Loaded model and optimizer from " \
-                  + self.params_path)
+            logger.info(f"Loaded model and optimizer from {self.params_path}")
         else:
-            print("[INFO] Initialized model and optimizer")
+            logger.info("Initialized model and optimizer")
         # ======================================================================
 
         # Agent
         # ======================================================================
         agent = self.init_agent(
             env=env,
-            model = model, 
-            device = self.device, 
-            hyper_params = hyper_params,
-            tensorboard_path = self.tensorboard_path
-            )
-        print("[INFO] Initialized agent")
+            model=model,
+            device=self.device,
+            hyperparams=hyperparams,
+            tensorboard_path=self.tensorboard_path
+        )
+        logger.info("Initialized agent")
         # ======================================================================
 
-        # Test
-        if self.test:
-            print("[INFO] Starting test...")
+        f = Figlet(font='slant')
+        if self.is_test:
+            print(f.renderText("T E S T"))
             agent.test()
         # Train
         else:
-            print("[INFO] Starting train...")
+            print(f.renderText("T R A I N"))
 
             wandb.init(
-                project=self.project, 
-                config=hyper_params, 
-                dir='report'
+                project=self._config.project,
+                config=hyperparams,
+                dir=self._config.reports_dir
             )
+
+            print(model)
 
             try:
                 agent.train()
             except KeyboardInterrupt:
                 pass
 
-            # Save 
+            # Save
             save_model_params(model, self.params_path)
-            print("[INFO] Saved model parameters to " + self.hyperparams_path)
-            save_hyper_params(hyper_params, self.hyperparams_path)
-            print("[INFO] Saved hyperparameters to " + self.hyperparams_path)
-            save_wandb(self.params_path, self.hyperparams_path, self.video_dir)
-            print("[INFO] Saved all to cloud(wandb)")
-        
-        env.close()
+            logger.info(f"Saved model parameters to {self.hyperparams_path}")
 
-        
+            save_hyperparams(hyperparams, self.hyperparams_path)
+            logger.info(f"Saved hyperparameters to {self.hyperparams_path}")
+
+            save_wandb(self.params_path,
+                       self.hyperparams_path, self.video_path)
+            logger.info(f"Saved all to cloud(wandb)")
+
+        env.close()

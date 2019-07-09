@@ -4,7 +4,7 @@ import torch.nn as nn
 from typing import List
 
 from common.abstract.base_agent import BaseAgent
-from common.abstract.base_env import Gym
+from environments.gym import Gym
  
 class A2C(BaseAgent):
     ''' Synchronous Advantage Actor Critic
@@ -22,7 +22,7 @@ class A2C(BaseAgent):
         model: nn.Module,
         optim: torch.optim, 
         device: str, 
-        hyper_params: dict, 
+        hyperparams: dict, 
         tensorboard_path: str
     ):
 
@@ -34,7 +34,7 @@ class A2C(BaseAgent):
         self.model = model
         self.optim = optim
 
-        self.hp = hyper_params
+        self.hp = hyperparams
 
         self.memory_reset()
 

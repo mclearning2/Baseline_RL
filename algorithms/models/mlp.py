@@ -5,7 +5,7 @@ import torch.nn as nn
 from typing import Callable, Union, List, Tuple
 from torch.distributions import Normal, Categorical
 
-from common.models.utils import init_linear_weights_xavier
+from algorithms.models.utils import init_linear_weights_xavier
 
 class MLP(nn.Module):
     """Baseline of Multi-layer perceptron"""

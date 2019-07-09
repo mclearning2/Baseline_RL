@@ -13,22 +13,45 @@ OpenAI gym의 환경들을 이용해서 [Spinning up의 Key Papers in Deep RL](h
 | ---------- | -------------- |
 | ![Acrobot-v1](https://github.com/mclearning2/Baseline_RL/blob/master/images/Acrobot-v1.gif) | ![LunarLander-v2](https://github.com/mclearning2/Baseline_RL/blob/master/images/LunarLander-v2.gif) |
 
-## System
+## Getting started
+
+### Prerequisites
+
 - Ubuntu 18.04
 - Python 3.6.7
-- PyTorch 1.1.0
+- swig
+- virtualenv
 
-## Usage
+#### Package
 
-### Setting
-``` bash
-git clone https://github.com/mclearning2/Baseline_RL.git
-virtualenv my_env
-source my_env/bin/activate
-pip3 install -r requirements.txt
+```
+sudo apt-get install python3-setuptools python3-dev python3-opencv swig ffmpeg build-essential libssl-dev libffi-dev libxml2-dev libxslt1-dev zlib1g-dev
+python3 -m pip install virtualenv
 ```
 
-### Example
+#### Repository
+
+```
+git clone https://github.com/mclearning2/Baseline_RL.git
+```
+
+#### Python Libraries
+
+```
+python3 -m virtualenv .env --no-site-packages
+source .env/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
+#### Wandb Init
+
+Please refer to https://docs.wandb.com/docs/started.html
+
+```
+wandb init
+wandb login
+```
+
 
 #### Train
 
@@ -42,21 +65,19 @@ python3 main.py
 
 ``` bash
 
-python3 main.py --test_mode
+python3 main.py --test
 ```
 
 ![train.gif](https://github.com/mclearning2/Baseline_RL/blob/master/images/Test.gif)
 
-### Parser
+### Argument Parsing
 
 | Argument | Default |Description |
 | :--------: |:------: |:-------- |
-| -\-user_name | mclearning2 | Restore from wandb by this user_name|
 | -\-project  | None | Restore from wandb by this project. and if None, this is replaced to the file name in {projects} folder you selected |
-| -\-run_id  | None | Restore from wandb by this run_id. If you input this value from wandb, It restore files from https://app.wandb.ai/{user_name}/{project}/runs/{run_id} to ``{report_dir}/model/{project}`` |
 | -\-seed | 1 | Seed for reproduction |
-| -\-test_mode | - | If this is included, agent starts test not train |
-| -\-restore | - | If this is included, hyperparameters from `./{report_dir}/model/{project}/hyperparams.pkl` is loaded and replaced by this in `hyper_params`  |
+| -\-test | - | If this is included, agent starts test not train |
+| -\-restore | - | If this is included, hyperparameters from `./{report_dir}/model/{project}/hyperparams.pkl` is loaded and replaced by this in `hyperparams`  |
 | -\-render | - | If this is included, agent starts render |
 | -\-record | - | If this is included, Interaction is recorded in `./{report_dir}/videos/{project}/` |
 

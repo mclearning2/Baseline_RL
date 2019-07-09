@@ -8,7 +8,7 @@ from algorithms.models.mlp import NormalDist, MLP, SepActorCritic
 from algorithms.PPO import PPO
 
 class Project(BaseProject):
-    def init_hyper_params(self):
+    def init_hyperparams(self):
         return {
             "gamma": 0.9204,
             "tau": 0.9094,
@@ -25,36 +25,36 @@ class Project(BaseProject):
             "critic_hidden_sizes": [61, 61],
         }
     
-    def init_env(self, hyper_params, monitor_func):
+    def init_env(self, hyperparams, monitor_func):
         return Gym(
             env_id='Pendulum-v0', 
-            n_envs=hyper_params['n_workers'],
+            n_envs=hyperparams['n_workers'],
             max_episode=500,
-            max_episode_steps=hyper_params['max_episode_steps'],
+            max_episode_steps=hyperparams['max_episode_steps'],
             monitor_func=monitor_func(lambda x: x % 50 == 0),
             scale_action=True,
         )
 
-    def init_model(self, input_size, output_size, device, hyper_params):
+    def init_model(self, input_size, output_size, device, hyperparams):
 
         actor = NormalDist(
             input_size=input_size,
-            hidden_sizes=hyper_params['actor_hidden_sizes'],
+            hidden_sizes=hyperparams['actor_hidden_sizes'],
             output_size=output_size,
             output_activation=nn.Tanh()
         )
 
         critic = MLP(
             input_size=input_size,
-            hidden_sizes=hyper_params['critic_hidden_sizes'],
+            hidden_sizes=hyperparams['critic_hidden_sizes'],
             output_size=1
         )
 
         model = SepActorCritic(actor, critic).to(device)
 
-        optimizer = optim.Adam(model.parameters(), hyper_params['actor_lr'])
+        optimizer = optim.Adam(model.parameters(), hyperparams['actor_lr'])
 
         return {"model": model, "optim": optimizer}
 
-    def init_agent(self, env, models, device, hyper_params):
-        return PPO(env, models['model'], models['optim'], device, hyper_params)
+    def init_agent(self, env, models, device, hyperparams):
+        return PPO(env, models['model'], models['optim'], device, hyperparams)

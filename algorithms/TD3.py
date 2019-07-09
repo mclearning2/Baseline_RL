@@ -17,7 +17,7 @@ class TD3(BaseAgent):
     - Train model [actor, critic1, critic2],
       Target model [target_actor, target_critic1, target_critic2]
       Otimizer [actor_optim, critic_optim1, critic_optim2]
-    - hyper_params in this agent
+    - hyperparams in this agent
         gamma(float): discount_factor
         tau(float): The ratio of target model for soft update
         max_sigma(float): The start of standard deviation of gaussian noise
@@ -36,7 +36,7 @@ class TD3(BaseAgent):
         target_actor, target_critic1, target_critic2,
         actor_optim, critic_optim1, critic_optim2,
         device: str,
-        hyper_params: dict
+        hyperparams: dict
     ):
         self.env = env
         self.device = device
@@ -53,7 +53,7 @@ class TD3(BaseAgent):
         self.critic_optim1 = critic_optim1
         self.critic_optim2 = critic_optim2
 
-        self.hp = hyper_params
+        self.hp = hyperparams
 
         self.memory = ReplayMemory(self.hp['memory_size'])
 

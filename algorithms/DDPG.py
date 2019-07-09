@@ -13,7 +13,7 @@ class DDPG(BaseAgent):
     - Only continuous action space
     - Action noise : Ornstein–Uhlenbeck process
 
-    - hyper_params in this agent
+    - hyperparams in this agent
         gamma(float): discount_factor
         tau(float): The ratio of target model for soft update
         batch_size(int): The sample size of experience replay memory
@@ -26,7 +26,7 @@ class DDPG(BaseAgent):
         target_actor, target_critic,
         actor_optim, critic_optim,
         device: str,
-        hyper_params: dict,
+        hyperparams: dict,
         tensorboard_path: str
     ):
         super().__init__(tensorboard_path)
@@ -42,7 +42,7 @@ class DDPG(BaseAgent):
         self.actor_optim = actor_optim
         self.critic_optim = critic_optim
         
-        self.hp = hyper_params
+        self.hp = hyperparams
 
         self.memory = ReplayMemory(self.hp['memory_size'])
         self.noise = OUNoise(self.env.action_size)        

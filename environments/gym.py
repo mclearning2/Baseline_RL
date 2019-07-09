@@ -7,7 +7,7 @@ class Gym:
         self,
         env_id: str,
         n_envs: int,
-        render_available = False,
+        is_render = False,
         max_episode: int = 50000,
         max_episode_steps: int = None,
         recent_score_len: int = 100,
@@ -27,7 +27,7 @@ class Gym:
             monitor_func: video를 record할 때 쓰는 함수
             clip_action: action을 -1과 1사이로 클립할 지 여부 (continuous만)
             scale_action: action을 환경의 low와 high에 맞게 정규화
-                        (-1 ~ 1 -> low ~ high)
+                          (-1 ~ 1 -> low ~ high)
         '''
 
         self.env = MultipleEnv(env_id, n_envs, max_episode_steps, monitor_func)
@@ -44,7 +44,7 @@ class Gym:
         self.clip_action = clip_action
         self.scale_action = scale_action
 
-        self.render_available = render_available
+        self.is_render = is_render
 
         self.done = np.zeros(n_envs, dtype=bool)
         self.step_per_ep = np.zeros(n_envs, dtype=int)
@@ -62,6 +62,7 @@ class Gym:
         self.env.close()
 
     def step(self, action: np.ndarray):
+        self.render()
 
         if self.is_discrete:
             assert np.shape(action) == (self.n_envs,)
@@ -108,7 +109,7 @@ class Gym:
         return next_state, reward, done, info
     
     def render(self):
-        if self.render_available:
+        if self.is_render:
             self.env.render()
 
     def seed(self, seed):
@@ -117,5 +118,5 @@ class Gym:
     def random_action(self):
         return self.env.random_action()
 
-    def first_env_episode_done(self):
+    def first_env_ep_done(self):
         return self.episodes[0] > self.max_episode

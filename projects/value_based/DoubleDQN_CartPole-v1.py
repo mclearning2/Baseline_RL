@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from gym.gym import Gym
+from environments.gym import Gym
 from common.abstract.base_project import BaseProject
 from algorithms.models.mlp import MLP
 from algorithms.DQN import DQN
@@ -11,36 +11,38 @@ class Project(BaseProject):
         return {
             "eps_start": 1.0,
             "eps_end": 0.1,
-            "eps_decay_steps": 5000,
-            "n_worker": 8,
-            "target_update_period": 600,
-            "memory_size": 20000,
+            "eps_decay_steps": 5000,            
+            "target_update_period": 600,            
             "start_learning_step": 1000,
             "batch_size": 64,
             "discount_factor": 0.99,
-            "learning_rate": 0.001,
+            "memory_size": 20000,
+            
+            "n_worker": 8,
             "max_episode_steps": 0,
+
+            "learning_rate": 0.001,
             "hidden_size": [256, 256],
             "double_q": True,            
         }
 
-    def init_env(self, hyperparams, monitor_func):
+    def init_env(self, hyperparams):
         return Gym(
             env_id='CartPole-v1',
             n_envs=hyperparams['n_worker'],
             max_episode=500,
             max_episode_steps=hyperparams['max_episode_steps'],
-            monitor_func=monitor_func(lambda x: x % 50 == 0),
+            monitor_func=self.monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
         )
 
-    def init_model(self, input_size, output_size, device, hyperparams):
+    def init_model(self, env, hyperparams):
         def modeling():
             return MLP(
-                input_size=input_size,
-                output_size=output_size,
+                input_size=env.state_size,
+                output_size=env.action_size,
                 hidden_sizes=hyperparams['hidden_size'],
-            ).to(device)
+            ).to(self.device)
 
         online_net = modeling()
         target_net = modeling()
@@ -51,7 +53,7 @@ class Project(BaseProject):
         return {"online_net": online_net, "target_net": target_net,
                 "optim": optimizer}
     
-    def init_agent(self, env, model, device, hyperparams):
+    def init_agent(self, env, model, hyperparams):
 
         return DQN(
             env=env, 

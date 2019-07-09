@@ -15,6 +15,7 @@ class Project(BaseProject):
             
             "n_workers": 8,
             "max_episode_steps": 0,
+
             "learning_rate": 0.005,
             "actor_hidden_sizes": [24],
             "critic_hidden_sizes": [24],
@@ -28,7 +29,7 @@ class Project(BaseProject):
             max_episode_steps = hyperparams['max_episode_steps'],
             monitor_func = self.monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
-            render_available=self.is_render
+            is_render=self.is_render
         )
 
     def init_model(self, env, hyperparams):
@@ -51,11 +52,11 @@ class Project(BaseProject):
 
         return {'model': model, 'optim': optimizer}
 
-    def init_agent(self, env, model, device, hyperparams, tensorboard_path):
+    def init_agent(self, env, model, hyperparams):
         return A2C(
             env = env, 
             model = model['model'], 
             optim = model['optim'], 
-            device = device, 
+            device = self.device, 
             hyperparams = hyperparams,
-            tensorboard_path = tensorboard_path)
+            tensorboard_path = self.tensorboard_path)

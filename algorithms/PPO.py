@@ -18,7 +18,17 @@ class PPO(BaseAgent):
         batch_size(int): The batch size of training
         epoch(int): The number of ppo update epoch
     '''
-    def __init__(self, env, model, optim, device, hyperparams):
+    def __init__(
+        self, 
+        env, 
+        model, 
+        optim, 
+        device: str, 
+        hyperparams: dict,
+        tensorboard_path: str,
+    ):
+        super().__init__(tensorboard_path)
+
         self.env = env
         self.device = device
         self.model = model
@@ -134,7 +144,7 @@ class PPO(BaseAgent):
 
     def train(self):
         state = self.env.reset()
-        while self.env.episodes[0] < self.env.max_episode + 1:
+        while not self.env.first_env_ep_done():
             for _ in range(self.hp['rollout_len']):
                 action = self.select_action(state)
                 
@@ -149,9 +159,10 @@ class PPO(BaseAgent):
 
                 if done[0]:
                     self.write_log(
+                        global_step = self.env.episodes[0],
                         episode=self.env.episodes[0],
                         score=self.env.scores[0],
-                        steps=self.env.steps[0],
+                        steps=self.env.step_per_ep[0],
                         recent_scores=np.mean(self.env.recent_scores)
                     )
 

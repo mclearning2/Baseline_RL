@@ -24,24 +24,24 @@ class Project(BaseProject):
             "img_height": 80
         }
 
-    def init_env(self, hyperparams, monitor_func):
+    def init_env(self, hyperparams):
         return Atari(
             env_id = 'BreakoutDeterministic-v4',
             max_episode = 10000,
             max_episode_steps = hyperparams['max_episode_steps'],
-            monitor_func = monitor_func(lambda x: x % 50 == 0 and x > 50000),
+            monitor_func = self.monitor_func(lambda x: x % 50 == 0 and x > 50000),
             recent_score_len = 100,
             n_history= hyperparams['n_history'],
             width=hyperparams['img_width'],
             height=hyperparams['img_height']
         )
 
-    def init_model(self, input_size, output_size, device, hyperparams):
+    def init_model(self, env, hyperparams):
 
         def modeling():
             return CNN(
-                input_size=input_size,
-                output_size=output_size,
+                input_size=env.state_size,
+                output_size=env.action_size,
                 conv_layers= [
                     nn.Conv2d(input_size[0], 32, 8, 4),
                     nn.Conv2d(32, 64, 4, 2),
@@ -49,7 +49,7 @@ class Project(BaseProject):
                 ],
                 hidden_sizes= [512],
                 hidden_activation=nn.ReLU(),
-            ).to(device)
+            ).to(self.device)
 
         online_net = modeling()
         target_net = modeling()
@@ -60,7 +60,7 @@ class Project(BaseProject):
         return {"online_net": online_net, "target_net": target_net,
                 "optim": optimizer}
     
-    def init_agent(self, env, model, device, hyperparams):
+    def init_agent(self, env, model, hyperparams):
 
         return DQN(
             env=env, 

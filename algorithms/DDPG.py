@@ -102,7 +102,7 @@ class DDPG(BaseAgent):
         state = self.env.reset()
         self.noise.reset()
         
-        while not self.env.is_first_env_done():
+        while not self.env.first_env_ep_done():
             action = self.select_action(state)
             action += self.noise.sample()
 
@@ -119,7 +119,7 @@ class DDPG(BaseAgent):
                 self.noise.reset()
 
                 self.write_log(
-                    global_step = self.env.total_step,
+                    global_step = self.env.episodes[0],
                     episode=self.env.episodes[0],
                     score=self.env.scores[0],
                     steps=self.env.step_per_ep[0],

@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.nn as nn
-from typing import List
+from typing import List, Type
 
 from common.abstract.base_agent import BaseAgent
 from environments.gym import Gym
@@ -12,20 +12,20 @@ class A2C(BaseAgent):
     - continuous, discrete action space
     - A model must output [distribution, value]
     
-    Hyperparameters:
+    Attributes:
         gamma(float): discount factor
-        entropy_ratio(float): 탐험을 위해 entropy을 얼마나 쓸지 계수
-        rollout_len(int): 업데이트 주기 n-step
+        entropy_ratio(float): The ratio of entropy in loss function
+        rollout_len(int): The number of interaction with environments
     '''
     def __init__(self, 
         env: Gym,
-        model: nn.Module,
-        optim: torch.optim, 
+        model: Type[nn.Module],
+        optim: Type[torch.optim.Optimizer], 
         device: str, 
         hyperparams: dict, 
         tensorboard_path: str
     ):
-
+        ''' Args refer to BaseAgent in common/abstract/base_project.py '''
         super().__init__(tensorboard_path)
 
         self.env = env
@@ -93,7 +93,7 @@ class A2C(BaseAgent):
     def train(self):
         state = self.env.reset()
 
-        while not self.env.first_env_episode_done():
+        while not self.env.first_env_ep_done():
             for _ in range(self.hp['rollout_len']):
 
                 action = self.select_action(state)

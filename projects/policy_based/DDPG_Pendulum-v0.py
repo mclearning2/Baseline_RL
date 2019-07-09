@@ -12,26 +12,28 @@ class Project(BaseProject):
         
         return {
             "gamma": 0.99,
-            "tau": 0.95,
-            "batch_size": 58,
+            "tau": 0.05,
+            "batch_size": 64,
             "memory_size": 1000000,
+
             "max_episode_steps": 0,
-            "actor_lr": 0.001165,
-            "critic_lr": 0.004501,
-            "actor_hidden_sizes": [57,57],
-            "critic_hidden_sizes": [8,8,8],
+
+            "actor_lr": 0.001,
+            "critic_lr": 0.005,
+            "actor_hidden_sizes": [50,50],
+            "critic_hidden_sizes": [10, 10],
         }
 
     def init_env(self, hyperparams):
         return Gym(
             env_id = 'Pendulum-v0', 
             n_envs = 1,
-            max_episode = 500,
+            max_episode = 200,
             max_episode_steps = hyperparams['max_episode_steps'],
             monitor_func = self.monitor_func(lambda x: x % 50 == 0),
             recent_score_len=20,
             scale_action=True,
-            render_available=self.is_render
+            is_render=self.is_render
         )
 
     def init_model(self, env, hyperparams):
@@ -71,7 +73,7 @@ class Project(BaseProject):
                 "actor_optim": actor_optim, "critic_optim": critic_optim}
     
     
-    def init_agent(self, env, model, device, hyperparams, tensorboard_path):
+    def init_agent(self, env, model, hyperparams):
 
         return DDPG(
             env=env, 
@@ -81,7 +83,7 @@ class Project(BaseProject):
             target_critic=model['target_critic'],
             actor_optim=model['actor_optim'],
             critic_optim=model['critic_optim'],
-            device=device,
+            device=self.device,
             hyperparams=hyperparams,
-            tensorboard_path = tensorboard_path
+            tensorboard_path = self.tensorboard_path
         )

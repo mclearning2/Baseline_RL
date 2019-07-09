@@ -47,7 +47,7 @@ class BaseProject(ABC):
     def init_hyperparams(self) -> dict:
         ''' train/test 할 때 사용될 하이퍼파라미터들을 딕셔너리로 반환
 
-        if self._config.restore == True:
+        if self._config.load == True:
             restored hyperparameter will be used
         else:
             hyperparameter here will be used
@@ -120,8 +120,8 @@ class BaseProject(ABC):
         return self._config.test
 
     @property
-    def is_restore(self):
-        return True if self._config.restore else False
+    def is_load(self):
+        return self._config.load
 
     @property
     def is_record(self):
@@ -157,21 +157,20 @@ class BaseProject(ABC):
     def run(self):
         # Restore files from wandb
         # ======================================================================
-        if self._config.restore:
-            user_name, project, run_id = self._config.restore.split('/')
+        if self._config.run_id:
             restore_wandb(
-                user_name=user_name,
-                project=project,
-                run_id=run_id,
+                user_name=self._config.user_name,
+                project=self._config.project,
+                run_id=self._config.run_id,
                 params_path=self.params_path,
                 hyperparams_path=self.hyperparams_path
             )
-            logger.info("Loaded from {self.run_id} in wandb cloud")
+            logger.info(f"Loaded from {self._config.run_id} in wandb cloud")
         # ======================================================================
 
         # Hyper parameters
         # ======================================================================
-        if self._config.restore:
+        if self.is_load:
             hyperparams = restore_hyperparams(self.hyperparams_path)
             logger.info("Loaded hyperparameters from " +
                         self.hyperparams_path)
@@ -199,7 +198,7 @@ class BaseProject(ABC):
         # ======================================================================
         model = self.init_model(env, hyperparams)
 
-        if self.is_restore:
+        if self.is_load:
             restore_model_params(model, self.params_path)
             logger.info(f"Loaded model and optimizer from {self.params_path}")
         else:
@@ -208,13 +207,7 @@ class BaseProject(ABC):
 
         # Agent
         # ======================================================================
-        agent = self.init_agent(
-            env=env,
-            model=model,
-            device=self.device,
-            hyperparams=hyperparams,
-            tensorboard_path=self.tensorboard_path
-        )
+        agent = self.init_agent(env, model, hyperparams)
         logger.info("Initialized agent")
         # ======================================================================
 

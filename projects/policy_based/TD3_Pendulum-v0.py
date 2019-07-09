@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
-from gym.gym import Gym
+from environments.gym import Gym
 from common.abstract.base_project import BaseProject
 from algorithms.utils.update import hard_update
 
@@ -30,51 +30,51 @@ class Project(BaseProject):
             "critic_hidden_sizes": [110, 110]
         }
 
-    def init_env(self, hyperparams, monitor_func):
+    def init_env(self, hyperparams):
         return Gym(
             env_id = 'Pendulum-v0', 
             n_envs = 1,
             max_episode = 500,
             max_episode_steps = hyperparams['max_episode_steps'],
-            monitor_func = monitor_func(lambda x: x % 50 == 0),
+            monitor_func = self.monitor_func(lambda x: x % 50 == 0),
             scale_action = True,
         )
 
-    def init_model(self, input_size, output_size, device, hyperparams):
+    def init_model(self, env, hyperparams):
         actor = MLP(
-            input_size=input_size,
-            output_size=output_size,
+            input_size=env.state_size,
+            output_size=env.action_size,
             hidden_sizes=hyperparams['actor_hidden_sizes'],
             output_activation=nn.Tanh()
         ).to(self.device)
 
         target_actor = MLP(
-            input_size=input_size,
-            output_size=output_size,
+            input_size=env.state_size,
+            output_size=env.action_size,
             hidden_sizes=hyperparams['actor_hidden_sizes'],
             output_activation=nn.Tanh()
         ).to(self.device)
 
         critic1 = MLP(
-            input_size=input_size + output_size,
+            input_size=env.state_size + env.action_size,
             output_size=1,
             hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
         critic2 = MLP(
-            input_size=input_size + output_size,
+            input_size=env.state_size + env.action_size,
             output_size=1,
             hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
         target_critic1 = MLP(
-            input_size=input_size + output_size,
+            input_size=env.state_size + env.action_size,
             output_size=1,
             hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
 
         target_critic2 = MLP(
-            input_size=input_size + output_size,
+            input_size=env.state_size + env.action_size,
             output_size=1,
             hidden_sizes=hyperparams['critic_hidden_sizes'],
         ).to(self.device)
@@ -93,7 +93,7 @@ class Project(BaseProject):
                 "actor_optim": actor_optim, \
                 "critic_optim1": critic_optim1, "critic_optim2": critic_optim2}
     
-    def init_agent(self, env, models, device, hyperparams):
+    def init_agent(self, env, models, hyperparams):
         return TD3(
             env=env, 
             actor=models['actor'], 
@@ -105,6 +105,6 @@ class Project(BaseProject):
             actor_optim=models['actor_optim'], 
             critic_optim1=models['critic_optim1'], 
             critic_optim2=models['critic_optim2'],
-            device=device, 
+            device=self.device, 
             hyperparams=hyperparams
         )

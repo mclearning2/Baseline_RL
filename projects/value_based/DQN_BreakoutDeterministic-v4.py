@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from gym.atari import Atari
+from environments.atari import Atari
 from common.abstract.base_project import BaseProject
 from algorithms.models.cnn import CNN
 from algorithms.DQN import DQN
@@ -28,6 +28,7 @@ class Project(BaseProject):
         return Atari(
             env_id = 'BreakoutDeterministic-v4',
             max_episode = 10000,
+            is_render=self.i_render,
             max_episode_steps = hyperparams['max_episode_steps'],
             monitor_func = self.monitor_func(lambda x: x % 50 == 0 and x > 50000),
             recent_score_len = 100,
@@ -43,7 +44,7 @@ class Project(BaseProject):
                 input_size=env.state_size,
                 output_size=env.action_size,
                 conv_layers= [
-                    nn.Conv2d(input_size[0], 32, 8, 4),
+                    nn.Conv2d(env.state_size[0], 32, 8, 4),
                     nn.Conv2d(32, 64, 4, 2),
                     nn.Conv2d(64, 64, 3, 1),
                 ],
@@ -67,6 +68,7 @@ class Project(BaseProject):
             online_net=model['online_net'],
             target_net=model['target_net'],
             optim=model['optim'],
-            device=device,
-            hyperparams=hyperparams
+            device=self.device,
+            hyperparams=hyperparams,
+            tensorboard_path=self.tensorboard_path
         )

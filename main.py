@@ -8,7 +8,7 @@ from common.pyinquirer import select_project
 def main():
     config = get_config()
 
-    # 선택한 프로젝트 경로 (projects/policy_based/A2C_CartPole-v1.py)
+    # # 선택한 프로젝트 경로 (projects/policy_based/A2C_CartPole-v1.py)
     project_path = select_project(projects_dir=config.projects_dir)
 
     # 경로에서 확장자 제외 (projects/policy_based/A2C_CartPole-v1)

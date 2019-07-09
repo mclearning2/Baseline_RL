@@ -47,7 +47,7 @@ class Gym:
         self.is_render = is_render
 
         self.done = np.zeros(n_envs, dtype=bool)
-        self.step_per_ep = np.zeros(n_envs, dtype=int)
+        self.steps_per_ep = np.zeros(n_envs, dtype=int)
         self.episodes = np.zeros(n_envs, dtype=int)
         self.scores = np.zeros(n_envs, dtype=float)
         self.recent_scores: deque = deque(maxlen=recent_score_len)
@@ -70,11 +70,11 @@ class Gym:
             assert np.shape(action) == (self.n_envs, self.action_size)
 
         # step 이후에 reset하면 log를 기록할 수 없으므로 다음 step에서 reset
-        self.step_per_ep[np.where(self.done)] = 0
+        self.steps_per_ep[np.where(self.done)] = 0
         self.scores[np.where(self.done)] = 0
         self.episodes[np.where(self.done)] += 1
 
-        self.step_per_ep += 1
+        self.steps_per_ep += 1
         if not self.is_discrete:
             if self.scale_action:
                 scale_factor = (self.high - self.low) / 2
@@ -88,7 +88,7 @@ class Gym:
         next_state, reward, done, info = self.env.step(action)
 
         # 마지막 step까지 간 경우 done으로 할지 말지
-        #done[np.where(self.step_per_ep == self.max_episode_steps)] = False
+        #done[np.where(self.steps_per_ep == self.max_episode_steps)] = False
 
         self.scores += reward
         self.done = done

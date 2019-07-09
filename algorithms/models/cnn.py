@@ -3,7 +3,7 @@ from typing import Callable
 import torch
 import torch.nn as nn
 
-from common.models.utils import init_linear_weights_xavier
+from algorithms.models.utils import init_linear_weights_xavier
 
 class CNN(nn.Module):
     """ Convolutional Neural Network """

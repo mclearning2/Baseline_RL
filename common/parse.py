@@ -6,7 +6,7 @@ def get_config() -> argparse.Namespace:
 
      parser.add_argument("-u", "--user_name", type=str, 
                          default="mclearning2",
-                         help="")
+                         help="wandb에서 데이터를 불러올 때 필요한 wandb id")
 
      # TODO: experiment로 이름 변환
      parser.add_argument("-p", "--project", type=str, 
@@ -16,7 +16,7 @@ def get_config() -> argparse.Namespace:
 
      parser.add_argument("-i", "--run_id", type=str, 
                          default=None,
-                         help="")
+                         help="wandb에서 불러올 특정 run_path")
 
      parser.add_argument("-s", "--seed", type=int, default=1,
                          help="이전 실험 결과를 그대로 보기 위한 랜덤 시드")

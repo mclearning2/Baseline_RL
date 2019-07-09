@@ -3,6 +3,7 @@
 # But modified a little...
 
 import gym
+import roboschool
 import numpy as np
 
 from typing import Callable

@@ -8,7 +8,17 @@ from algorithms.utils.buffer import ReplayMemory, PrioritizedReplayMemory
 from algorithms.utils.update import hard_update
 
 class DQN(BaseAgent):
-    def __init__(self, env, online_net, target_net, optim, device, hyperparams):
+    def __init__(
+        self, 
+        env, 
+        online_net, 
+        target_net, 
+        optim, 
+        device, 
+        hyperparams,
+        tensorboard_path
+    ):
+        super().__init__(tensorboard_path)
         self.env = env
         self.device = device
         self.optim = optim
@@ -97,13 +107,12 @@ class DQN(BaseAgent):
         state = self.env.reset()
     
         total_step = 0
-        while not self.env.is_episode_done():            
+        while not self.env.first_env_ep_done():            
             total_step += 1
             action = self.select_action(state)
             
             next_state, reward, done, info = self.env.step(action)
-
-            self.memory.save(state, action, reward, next_state, done)
+            self.memory.save(state, np.expand_dims(action, 1), reward, next_state, done)
 
             state = next_state
 
@@ -118,8 +127,9 @@ class DQN(BaseAgent):
 
             if self.env.done[0]:
                 self.write_log(
+                    global_step=self.env.episodes[0],
                     episode=self.env.episodes[0],
-                    steps=self.env.steps[0],
+                    steps=self.env.steps_per_ep[0],
                     score=self.env.scores[0],                    
                     recent_scores=np.mean(self.env.recent_scores),
                     epsilon=self.epsilon,

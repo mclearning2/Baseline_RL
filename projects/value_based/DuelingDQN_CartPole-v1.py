@@ -29,6 +29,7 @@ class Project(BaseProject):
         return Gym(
             env_id='CartPole-v1',
             n_envs=hyperparams['n_worker'],
+            is_render=self.i_render,
             max_episode=500,
             max_episode_steps=hyperparams['max_episode_steps'],
             monitor_func=self.monitor_func(lambda x: x % 50 == 0),
@@ -40,7 +41,7 @@ class Project(BaseProject):
             return  DuelingMLP(
                 input_size=env.state_size,
                 hidden_sizes=hyperparams["hidden_size"],
-                output_sizes1=hyperparams['advantage_hidden_size'] + [output_size],
+                output_sizes1=hyperparams['advantage_hidden_size'] + [env.action_size],
                 output_sizes2=hyperparams['value_hidden_size'] + [1],
             ).to(self.device)
 
@@ -60,6 +61,7 @@ class Project(BaseProject):
             online_net=model['online_net'],
             target_net=model['target_net'],
             optim=model['optim'],
-            device=device,
-            hyperparams=hyperparams
+            device=self.device,
+            hyperparams=hyperparams,
+            tensorboard_path=self.tensorboard_path
         )

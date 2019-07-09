@@ -109,5 +109,6 @@ class Project(BaseProject):
             critic_optim1=models['critic_optim1'], 
             critic_optim2=models['critic_optim2'],
             device=self.device, 
-            hyperparams=hyperparams
+            hyperparams=hyperparams,
+            tensorboard_path=self.tensorboard_path
         )

@@ -32,7 +32,8 @@ class Project(BaseProject):
         return Gym(
             env_id='RoboschoolHalfCheetah-v1', 
             n_envs=hyperparams['n_workers'],
-            max_episode= 2000,
+            is_render=self.is_render,
+            max_episode=2000,
             max_episode_steps=hyperparams['max_episode_steps'],
             monitor_func=self.monitor_func(lambda x: x % 50 == 0),
             scale_action=True,

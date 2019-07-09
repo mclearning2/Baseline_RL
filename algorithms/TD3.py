@@ -36,8 +36,11 @@ class TD3(BaseAgent):
         target_actor, target_critic1, target_critic2,
         actor_optim, critic_optim1, critic_optim2,
         device: str,
-        hyperparams: dict
+        hyperparams: dict,
+        tensorboard_path: str,
     ):
+        super().__init__(tensorboard_path)
+
         self.env = env
         self.device = device
         
@@ -146,12 +149,13 @@ class TD3(BaseAgent):
             state = next_state
 
             if len(self.memory) > self.hp['batch_size']:
-                self.train_model(self.env.steps[0])
+                self.train_model(total_step)
 
             if done[0]:
                 self.write_log(
+                    global_step=self.env.episodes[0],
                     episode=self.env.episodes[0],
                     score=self.env.scores[0],
-                    steps=self.env.steps[0],
+                    steps=self.env.steps_per_ep[0],
                     recent_scores=np.mean(self.env.recent_scores)
                 )

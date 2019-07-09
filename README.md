@@ -17,16 +17,16 @@ OpenAI gym의 환경들을 이용해서 [Spinning up의 Key Papers in Deep RL](h
 
 ### Prerequisites
 
-- Ubuntu 18.04
+저의 실험환경. 그 외에는 돌아갈지 알 수 없음..
+
+- Ubuntu 18.04 : 실제로 저는 linux mint 19.1에서 했지만 우분투에서도 잘 돌아감을 확인했습니다.
 - Python 3.6.7
-- swig
-- virtualenv
 
 #### Package
 
 ```
-sudo apt-get install python3-setuptools python3-dev python3-opencv swig ffmpeg build-essential libssl-dev libffi-dev libxml2-dev libxslt1-dev zlib1g-dev
-python3 -m pip install virtualenv
+sudo apt-get install python3-setuptools python-dev python3-dev python3-opencv swig ffmpeg build-essential libssl-dev libffi-dev libxml2-dev libxslt-dev libxslt1-dev zlib1g-dev qtbase5-dev libqt5opengl5-dev libassimp-dev cmake patchelf
+python3 -m pip install virtualenv 
 ```
 
 #### Repository
@@ -52,6 +52,18 @@ wandb init
 wandb login
 ```
 
+#### Roboschool
+
+```
+sudo apt-get install qtbase5 libqt5opengl5-dev libassimp-dev patchelf cmake
+git clone https://github.com/openai/roboschool && cd roboschool
+./install_boost.sh
+./install_bullet.sh
+source exports.sh
+export CPLUS_INCLUDE_PATH=/usr/include/python3.6
+pip3 install wheel
+cd roboschool/cpp-household && make clean && make -j4 && cd ../.. && pip3 install -e .
+```
 
 #### Train
 

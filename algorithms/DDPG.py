@@ -119,10 +119,10 @@ class DDPG(BaseAgent):
                 self.noise.reset()
 
                 self.write_log(
-                    global_step = self.env.episodes[0],
+                    global_step=self.env.episodes[0],
                     episode=self.env.episodes[0],
                     score=self.env.scores[0],
-                    steps=self.env.step_per_ep[0],
+                    steps=self.env.steps_per_ep[0],
                     recent_scores=np.mean(self.env.recent_scores)
                 )
 

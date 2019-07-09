@@ -47,7 +47,6 @@ class ReplayMemory():
             assert np.shape(arg)[0] == n_worker, \
                    f"save할 데이터의 n_worker는 {n_worker}여야 합니다." \
                    f"하지만 {np.shape(arg)[0]} 입니다."
-            
             assert np.ndim(arg) > 1, "shape는 [n_worker, *data_shape] 여야 합니다."
 
         # 메모리 리스트가 비어있을 경우(초기)

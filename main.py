@@ -30,12 +30,12 @@ if __name__ == '__main__':
 
     # projects/policybased/A2C_CartPole-v1.py
     # => projects.policybased.A2C_CartPole-v1
-    import_name = project_path.split(".")[0].replace("/", ".")
+    # print(project_path)
+    # import sys; sys.exit()
+    import_name = project_path.split(".")[0].replace("\\", ".")
 
     # import projects.policybased.A2C_CartPole-v1
     module = import_module(import_name)
 
-    print(module)
-    import sys;sys.exit()
     project = module.Project(config)
     project.run()

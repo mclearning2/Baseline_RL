@@ -13,8 +13,13 @@ from common.utils import restore_wandb, save_wandb
 from common.utils import restore_hyper_params, save_hyper_params
 from common.utils import restore_model_params, save_model_params
 
+class BaseProject(ABC):
+    def __init__(self, config: argparse.Namespace):
+        self.__config = config
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() 
+                                   else "cpu")
 
-class AbstractProject(object):
+    @abstractmethod
     def init_hyper_params(self) -> dict:
         ''' train/test 할 때 사용될 하이퍼파라미터들을 딕셔너리로 반환
 
@@ -27,6 +32,7 @@ class AbstractProject(object):
                      "epsilon": 0.1 }
         '''
 
+    @abstractmethod
     def init_env(self, hyper_params: dict) -> Union[Atari, Classic]:
         ''' `envs/ 에 있는 클래스 중 객체 하나를 만들어서 반환.
 
@@ -42,6 +48,7 @@ class AbstractProject(object):
                          )
         '''
 
+    @abstractmethod
     def init_model(
         self,
         state_size: Union[list, int],
@@ -63,6 +70,7 @@ class AbstractProject(object):
             return {'model', model, 'optim', optimizer}
         '''
 
+    @abstractmethod
     def init_agent(
         self,
         env,
@@ -83,13 +91,6 @@ class AbstractProject(object):
         Examples:
             return A2C(...)
         '''
-
-
-class BaseProject(ABC):
-    def __init__(self, config: argparse.Namespace):
-        self.__config = config
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() 
-                                   else "cpu")
 
     def is_render(self):
         return self.__config.render
